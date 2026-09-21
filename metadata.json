@@ -1,0 +1,6 @@
+{
+  "name": "Georges - Assistant Personnel & Campagnes Email",
+  "description": "Assistant personnel intelligent façon J.A.R.V.I.S. d'Iron Man : voix cybernétique, horloge & réveil météo matinal, photos téléphone et captures d'écran, gestion des gardes d'ambulance et carnet de santé, publication d'application et recrutement de testeurs, bourse et consensus multi-IA.",
+  "requestFramePermissions": ["microphone", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
