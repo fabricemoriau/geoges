@@ -7,12 +7,15 @@ import {
   MapPin, 
   Trash2, 
   Sparkles,
-  CalendarDays,
-  Filter,
   Car,
-  ShieldPlus
+  ClipboardList,
+  Check,
+  Mic,
+  Send,
+  AlertCircle
 } from "lucide-react";
-import { AgendaEvent } from "../types";
+import { AgendaEvent, UserRequestItem } from "../types";
+import { initialUserRequests } from "../data/initialData";
 
 interface AgendaTabProps {
   events: AgendaEvent[];
@@ -27,6 +30,9 @@ export const AgendaTab: React.FC<AgendaTabProps> = ({
   onToggleComplete,
   onDeleteEvent,
 }) => {
+  const [subTab, setSubTab] = useState<"agenda" | "requests">("agenda");
+
+  // Agenda Event Form State
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDate, setNewDate] = useState("2026-09-22");
@@ -34,6 +40,11 @@ export const AgendaTab: React.FC<AgendaTabProps> = ({
   const [newCategory, setNewCategory] = useState<AgendaEvent["category"]>("Garde Ambulance");
   const [newLocation, setNewLocation] = useState("");
   const [selectedCat, setSelectedCat] = useState<string>("all");
+
+  // Requests Register State
+  const [requests, setRequests] = useState<UserRequestItem[]>(initialUserRequests);
+  const [newRequestText, setNewRequestText] = useState("");
+  const [newRequestCategory, setNewRequestCategory] = useState<UserRequestItem["category"]>("Email");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +80,39 @@ export const AgendaTab: React.FC<AgendaTabProps> = ({
     setIsAdding(true);
   };
 
+  // Record a new Request in Registre des Demandes
+  const handleAddRequest = () => {
+    if (!newRequestText.trim()) return;
+    const req: UserRequestItem = {
+      id: `req-${Date.now()}`,
+      requestText: newRequestText,
+      source: "texte",
+      category: newRequestCategory,
+      status: "en_cours",
+      georgesNotes: "Demande enregistrée par Georges. Traitement immédiat.",
+      recordedAt: "À l'instant"
+    };
+
+    setRequests([req, ...requests]);
+    setNewRequestText("");
+  };
+
+  const handleToggleRequestStatus = (id: string) => {
+    setRequests((prev) =>
+      prev.map((r) => {
+        if (r.id === id) {
+          const nextStatus = r.status === "traitée" ? "en_cours" : "traitée";
+          return {
+            ...r,
+            status: nextStatus,
+            completedAt: nextStatus === "traitée" ? "À l'instant" : undefined
+          };
+        }
+        return r;
+      })
+    );
+  };
+
   const filtered = events.filter(
     (ev) => selectedCat === "all" || ev.category === selectedCat
   );
@@ -92,269 +136,261 @@ export const AgendaTab: React.FC<AgendaTabProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-5 space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xl font-bold text-slate-900">
-              Agenda & Tours de Garde
-            </h2>
-            <span className="text-xs bg-indigo-50 text-indigo-700 font-semibold px-2.5 py-0.5 rounded-full border border-indigo-200">
-              Coordonné par Georges
-            </span>
+      {/* Top Banner & Subtab Switcher */}
+      <div className="bg-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xl shadow-md">
+              <Calendar className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                <span>Agenda, Rappels & Registre des Demandes</span>
+                <span className="text-xs bg-amber-400/20 text-amber-300 font-semibold px-2.5 py-0.5 rounded-full border border-amber-400/30">
+                  By Georges
+                </span>
+              </h2>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Suivi du planning, rappels et enregistrement en direct des ordres de Monsieur Fabrice Moriau
+              </p>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Aujourd'hui : Lundi 21 Septembre 2026 &middot; {events.length} rendez-vous et gardes planifiés.
-          </p>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Quick Ambulance Button */}
-          <button
-            onClick={() => handleQuickAddAmbulanceShift("jour")}
-            className="bg-cyan-900 hover:bg-cyan-800 text-cyan-300 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-          >
-            <Car className="w-4 h-4 text-cyan-400" />
-            <span>+ Garde Ambulance</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setNewCategory("Pro");
-              setNewTitle("");
-              setNewTime("14:00");
-              setIsAdding(true);
-            }}
-            className="bg-slate-900 hover:bg-slate-800 text-amber-400 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Planifier un événement</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Quick Ambulance Presets Banner */}
-      <div className="bg-slate-900 text-slate-200 rounded-2xl p-3 sm:p-4 border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2">
-          <Car className="w-4 h-4 text-cyan-400 animate-pulse" />
-          <span className="font-semibold text-white">Ajout rapide de vos tours de garde :</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => handleQuickAddAmbulanceShift("jour")}
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 font-medium transition-colors"
-          >
-            ☀️ Garde Jour (07h-19h)
-          </button>
-          <button
-            onClick={() => handleQuickAddAmbulanceShift("nuit")}
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 font-medium transition-colors"
-          >
-            🌙 Garde Nuit (19h-07h)
-          </button>
-          <button
-            onClick={() => handleQuickAddAmbulanceShift("vsl")}
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 font-medium transition-colors"
-          >
-            🚐 Vacation VSL (08h-17h)
-          </button>
-          <button
-            onClick={() => handleQuickAddAmbulanceShift("astreinte")}
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-medium transition-colors"
-          >
-            ⚡ Astreinte SMUR
-          </button>
-        </div>
-      </div>
-
-      {/* Add Form Drawer */}
-      {isAdding && (
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white rounded-3xl border-2 border-slate-800 p-5 sm:p-6 shadow-md space-y-4"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-indigo-600" />
-              Nouveau rendez-vous ou tour de garde
-            </span>
+          <div className="flex items-center gap-1.5 bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700">
             <button
-              type="button"
-              onClick={() => setIsAdding(false)}
-              className="text-xs text-slate-400 hover:text-slate-700"
+              onClick={() => setSubTab("agenda")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                subTab === "agenda"
+                  ? "bg-amber-400 text-slate-950 shadow-md"
+                  : "text-slate-300 hover:text-white"
+              }`}
             >
-              Fermer
+              Agenda & Gardes ({events.length})
+            </button>
+            <button
+              onClick={() => setSubTab("requests")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                subTab === "requests"
+                  ? "bg-amber-400 text-slate-950 shadow-md"
+                  : "text-slate-300 hover:text-white"
+              }`}
+            >
+              Registre des Demandes ({requests.length})
             </button>
           </div>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* SUBTAB 1: AGENDA & PLANNING */}
+      {subTab === "agenda" && (
+        <div className="space-y-5">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Titre de l'événement ou de la garde</label>
-              <input
-                type="text"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="Ex: Garde Ambulance de Jour ASSU-03, Réunion..."
-                className="w-full text-xs border rounded-lg p-2.5"
-                required
-              />
+              <h3 className="text-base font-bold text-slate-900">Aujourd'hui & Prochains Événements</h3>
+              <p className="text-xs text-slate-500">Planning synchronisé avec vos vacations d'ambulance et vos réunions.</p>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Catégorie</label>
-              <select
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value as any)}
-                className="w-full text-xs border rounded-lg p-2.5 bg-white font-medium"
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleQuickAddAmbulanceShift("jour")}
+                className="bg-cyan-900 hover:bg-cyan-800 text-cyan-300 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5"
               >
-                <option value="Garde Ambulance">🚑 Garde Ambulance / Tournée</option>
-                <option value="Pro">Professionnel</option>
-                <option value="Serveur">Serveur PC Maison</option>
-                <option value="Emailing">Campagnes & Emailing</option>
-                <option value="Perso">Personnel</option>
-              </select>
-            </div>
+                <Car className="w-3.5 h-3.5 text-cyan-400" />
+                <span>+ Garde Ambulance</span>
+              </button>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Date</label>
-              <input
-                type="date"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-                className="w-full text-xs border rounded-lg p-2.5"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Heure</label>
-                <input
-                  type="time"
-                  value={newTime}
-                  onChange={(e) => setNewTime(e.target.value)}
-                  className="w-full text-xs border rounded-lg p-2.5"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Lieu / Secteur</label>
-                <input
-                  type="text"
-                  value={newLocation}
-                  onChange={(e) => setNewLocation(e.target.value)}
-                  placeholder="Ex: Secteur Urgences CHU, Bureau"
-                  className="w-full text-xs border rounded-lg p-2.5"
-                />
-              </div>
+              <button
+                onClick={() => setIsAdding(!isAdding)}
+                className="bg-slate-900 hover:bg-slate-800 text-amber-400 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{isAdding ? "Fermer" : "Ajouter un événement"}</span>
+              </button>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setIsAdding(false)}
-              className="px-3 py-1.5 rounded-lg text-xs text-slate-600 hover:bg-slate-100"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800"
-            >
-              Enregistrer dans l'agenda
-            </button>
+          {/* Form */}
+          {isAdding && (
+            <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-slate-200 p-5 space-y-3 text-xs shadow-md">
+              <div className="font-bold text-slate-900 text-sm">Nouveau Rendez-vous / Garde</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Intitulé</label>
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Ex: Réunion ou Garde ASSU"
+                    className="w-full border rounded-xl p-2"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                    className="w-full border rounded-xl p-2 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Heure</label>
+                  <input
+                    type="time"
+                    value={newTime}
+                    onChange={(e) => setNewTime(e.target.value)}
+                    className="w-full border rounded-xl p-2 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="submit"
+                  className="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-xl"
+                >
+                  Enregistrer l'événement
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* List */}
+          <div className="bg-white rounded-3xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-xs">
+            {filtered.map((ev) => (
+              <div
+                key={ev.id}
+                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-start gap-3">
+                  <button
+                    onClick={() => onToggleComplete(ev.id)}
+                    className={`mt-0.5 p-1 rounded-full border transition-colors ${
+                      ev.isCompleted ? "bg-emerald-600 border-emerald-600 text-white" : "border-slate-300 text-transparent"
+                    }`}
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] px-2 py-0.5 rounded border ${getCategoryColor(ev.category)}`}>
+                        {ev.category}
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium">{ev.date} à {ev.time}</span>
+                    </div>
+
+                    <div className={`text-xs sm:text-sm font-bold ${ev.isCompleted ? "line-through text-slate-400" : "text-slate-900"}`}>
+                      {ev.title}
+                    </div>
+
+                    {ev.location && (
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-slate-400" />
+                        <span>{ev.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => onDeleteEvent(ev.id)}
+                  className="text-slate-400 hover:text-rose-600 p-2 self-end sm:self-center"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
           </div>
-        </form>
+        </div>
       )}
 
-      {/* Category Filter */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {["all", "Garde Ambulance", "Pro", "Serveur", "Emailing", "Perso"].map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCat(cat)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-              selectedCat === cat
-                ? "bg-slate-900 text-white font-semibold"
-                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
-            }`}
-          >
-            {cat === "all" ? "Tous les événements" : cat}
-          </button>
-        ))}
-      </div>
-
-      {/* Agenda Event Cards */}
-      <div className="space-y-3">
-        {filtered.map((ev) => (
-          <div
-            key={ev.id}
-            className={`bg-white rounded-2xl border p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
-              ev.isCompleted ? "opacity-60 bg-slate-50 border-slate-200" : "border-slate-200 hover:border-slate-300"
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              <button
-                onClick={() => onToggleComplete(ev.id)}
-                className={`mt-0.5 w-5 h-5 rounded-lg border flex items-center justify-center transition-colors ${
-                  ev.isCompleted
-                    ? "bg-emerald-500 border-emerald-500 text-white"
-                    : "border-slate-300 hover:border-indigo-600"
-                }`}
-              >
-                {ev.isCompleted && <CheckCircle2 className="w-3.5 h-3.5" />}
-              </button>
-
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  {ev.category === "Garde Ambulance" && (
-                    <Car className="w-4 h-4 text-cyan-600 shrink-0" />
-                  )}
-                  <h3 className={`text-sm font-bold ${ev.isCompleted ? "line-through text-slate-500" : "text-slate-900"}`}>
-                    {ev.title}
-                  </h3>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${getCategoryColor(ev.category)}`}>
-                    {ev.category}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                  <div className="flex items-center gap-1">
-                    <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{ev.date}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{ev.time} ({ev.durationMinutes} min)</span>
-                  </div>
-                  {ev.location && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{ev.location}</span>
-                    </div>
-                  )}
-                </div>
-
-                {ev.description && (
-                  <p className="text-xs text-slate-600 mt-1">
-                    {ev.description}
-                  </p>
-                )}
-              </div>
+      {/* SUBTAB 2: REGISTRE DES DEMANDES DE MONSIEUR */}
+      {subTab === "requests" && (
+        <div className="space-y-5">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-4">
+            <div className="border-b pb-3">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-amber-500" />
+                Registre des Demandes & Ordres de Monsieur Fabrice Moriau
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Chaque consigne ou demande dictée à Georges est enregistrée ici avec suivi d'exécution en temps réel.
+              </p>
             </div>
 
-            <div className="flex items-center gap-2 self-end sm:self-center">
-              <button
-                onClick={() => onDeleteEvent(ev.id)}
-                className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                title="Supprimer"
+            {/* Request Input Form */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={newRequestText}
+                onChange={(e) => setNewRequestText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddRequest()}
+                placeholder="Consigne ou ordre pour Georges (ex: Télécharger le dossier FMS sur mon tel)..."
+                className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-xs focus:outline-hidden"
+              />
+
+              <select
+                value={newRequestCategory}
+                onChange={(e) => setNewRequestCategory(e.target.value as UserRequestItem["category"])}
+                className="border border-slate-300 rounded-xl px-3 py-2.5 text-xs bg-white"
               >
-                <Trash2 className="w-4 h-4" />
+                <option value="Email">Email</option>
+                <option value="Dossier">Dossier</option>
+                <option value="Recherche Web">Recherche Web</option>
+                <option value="Réseaux Sociaux">Réseaux Sociaux</option>
+                <option value="Emploi">Emploi</option>
+                <option value="Agenda">Agenda</option>
+              </select>
+
+              <button
+                onClick={handleAddRequest}
+                className="bg-slate-900 hover:bg-slate-800 text-amber-400 px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Enregistrer</span>
               </button>
             </div>
           </div>
-        ))}
-      </div>
+
+          {/* Requests Feed */}
+          <div className="bg-white rounded-3xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-xs">
+            {requests.map((req) => (
+              <div key={req.id} className="p-4 space-y-2 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                      {req.category}
+                    </span>
+                    <span className="text-xs text-slate-400">Source : {req.source} &middot; {req.recordedAt}</span>
+                  </div>
+
+                  <button
+                    onClick={() => handleToggleRequestStatus(req.id)}
+                    className={`text-xs font-bold px-3 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
+                      req.status === "traitée"
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                        : "bg-amber-100 text-amber-900 border border-amber-300"
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{req.status === "traitée" ? "Traitée / Validée" : "En cours de traitement"}</span>
+                  </button>
+                </div>
+
+                <div className="text-xs sm:text-sm font-bold text-slate-900">{req.requestText}</div>
+
+                {req.georgesNotes && (
+                  <div className="text-xs text-indigo-950 bg-indigo-50/70 p-2.5 rounded-xl border border-indigo-100 flex items-start gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
+                    <span>{req.georgesNotes}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -15,11 +15,13 @@ import { AgendaTab } from "./components/AgendaTab";
 import { NotesTab } from "./components/NotesTab";
 import { HomeServerTab } from "./components/HomeServerTab";
 import { JarvisVisionModal } from "./components/JarvisVisionModal";
+import { VoiceAssistant } from "./components/VoiceAssistant";
 import { AlarmClockTab } from "./components/AlarmClockTab";
 import { PhoneAppsTab } from "./components/PhoneAppsTab";
 import { AppPublisherTab } from "./components/AppPublisherTab";
 import { CodeVaultTab } from "./components/CodeVaultTab";
-import { 
+import { OnboardingScreen } from "./components/OnboardingScreen";
+import {
   initialEmails, 
   initialNotes, 
   initialAgendaEvents,
@@ -46,6 +48,10 @@ import {
 export default function App() {
   const [currentTab, setCurrentTab] = useState<string>("chat");
   const [activeModel, setActiveModel] = useState<AIChatModel>("gemini-3.5-flash");
+
+  const [isOnboarded, setIsOnboarded] = useState<boolean>(() => {
+    return localStorage.getItem("georges_onboarded") === "true";
+  });
 
   // Vision Modal State (Photo Smartphone & Screenshot HUD)
   const [isVisionModalOpen, setIsVisionModalOpen] = useState<boolean>(false);
@@ -237,6 +243,28 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const handleVoiceCommand = async (transcript: string): Promise<string> => {
+    const lower = transcript.toLowerCase();
+    if (lower.includes("email") || lower.includes("mail")) {
+      setCurrentTab("emails");
+      return "J'ouvre vos e-mails, Monsieur.";
+    } else if (lower.includes("agenda") || lower.includes("rendez-vous")) {
+      setCurrentTab("agenda");
+      return "Voici votre agenda.";
+    } else if (lower.includes("bourse") || lower.includes("action")) {
+      setCurrentTab("finance");
+      return "J'ouvre l'espace Bourse.";
+    } else if (lower.includes("lettre") || lower.includes("courrier")) {
+      setCurrentTab("letters");
+      return "J'ouvre le rédacteur de courriers.";
+    } else if (lower.includes("serveur") || lower.includes("pc")) {
+      setCurrentTab("server");
+      return "Voici l'état du serveur maison.";
+    }
+    setCurrentTab("chat");
+    return `Consigne bien reçue : "${transcript}".`;
+  };
+
   // Code Vault Handlers
   const handleAddCode = (codeData: Omit<CodeVaultItem, "id" | "createdAt">) => {
     const newCode: CodeVaultItem = {
@@ -400,6 +428,23 @@ export default function App() {
   const unreadEmailsCount = emails.filter((e) => !e.isRead).length;
   const upcomingEventsCount = events.filter((e) => !e.isCompleted).length;
 
+  if (!isOnboarded) {
+    return (
+      <OnboardingScreen
+        onComplete={(settings) => {
+          localStorage.setItem("georges_onboarded", "true");
+          localStorage.setItem("georges_user_name", settings.userName);
+          localStorage.setItem("georges_voice_style", settings.voiceStyle);
+          localStorage.setItem("georges_server_ip", settings.serverIp);
+          localStorage.setItem("georges_api_key", settings.apiKey);
+          // Apply initial choices to local state if needed
+          setServerOnline(settings.serverEnabled);
+          setIsOnboarded(true);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased selection:bg-amber-100 selection:text-amber-900">
       {/* Executive Header */}
@@ -496,6 +541,7 @@ export default function App() {
             onSendAsEmail={(subject, body, recipient) => {
               const newMail: EmailItem = {
                 id: `mail-${Date.now()}`,
+                account: "fabrice.moriau@gmail.com",
                 from: "fabrice.moriau@gmail.com",
                 fromName: "Moi (Fabrice)",
                 subject,
@@ -541,6 +587,13 @@ export default function App() {
           <HomeServerTab onAddNote={handleAddNote} />
         )}
       </main>
+
+      {/* J.A.R.V.I.S. Voice Assistant Floating Widget */}
+      <VoiceAssistant
+        onVoiceCommand={handleVoiceCommand}
+        onNavigateToTab={setCurrentTab}
+        onOpenVisionModal={handleOpenVisionModal}
+      />
 
       {/* J.A.R.V.I.S. Multimodal Vision Modal (Phone Camera, Live HUD & Screenshot) */}
       <JarvisVisionModal

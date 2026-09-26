@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { getApiUrl } from "../utils/api";
 import {
   TrendingUp,
   TrendingDown,
@@ -169,7 +170,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ onAddNote }) => {
   const fetchMarkets = async () => {
     setIsLoadingMarkets(true);
     try {
-      const res = await fetch("/api/finance/markets");
+      const res = await fetch(getApiUrl("/api/finance/markets"));
       if (res.ok) {
         const data = await res.json();
         setIndices(data.indices || []);
@@ -358,7 +359,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ onAddNote }) => {
     setCustomAnalysis(null);
 
     try {
-      const res = await fetch("/api/finance/analyze", {
+      const res = await fetch(getApiUrl("/api/finance/analyze"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: customStockQuery }),
@@ -380,7 +381,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ onAddNote }) => {
     setIsAuditing(true);
     setIsAuditModalOpen(true);
     try {
-      const res = await fetch("/api/finance/portfolio-audit", {
+      const res = await fetch(getApiUrl("/api/finance/portfolio-audit"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ portfolio }),

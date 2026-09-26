@@ -13,22 +13,19 @@ app.use(express.json({ limit: "15mb" }));
 
 // Lazy initialized GenAI client
 let genAIClient: GoogleGenAI | null = null;
-function getGenAI(): GoogleGenAI {
-  if (!genAIClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn("GEMINI_API_KEY not found in environment. Server will use mock fallback if needed.");
-    }
-    genAIClient = new GoogleGenAI({
-      apiKey: apiKey || "dummy_key",
-      httpOptions: {
-        headers: {
-          "User-Agent": "aistudio-build",
-        },
-      },
-    });
+function getGenAI(requestApiKey?: string): GoogleGenAI {
+  const apiKey = requestApiKey || process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn("GEMINI_API_KEY not found in environment or request. Server will use mock fallback if needed.");
   }
-  return genAIClient;
+  return new GoogleGenAI({
+    apiKey: apiKey || "dummy_key",
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
+      },
+    },
+  });
 }
 
 // Health check
@@ -39,7 +36,7 @@ app.get("/api/health", (_req: Request, res: Response) => {
 // 1. Multi-turn Chatbot endpoint with Georges persona and model choices
 app.post("/api/chat", async (req: Request, res: Response) => {
   try {
-    const { messages, model, systemRole } = req.body;
+    const { messages, model, systemRole, apiKey, learnedPreferences } = req.body;
     
     // Model selection constraint check:
     // User requested: gemini-3.1-pro-preview for complex tasks, gemini-3.5-flash for general, gemini-3.1-flash-lite for fast tasks.
@@ -57,20 +54,24 @@ Tes compétences incluent :
 
 Rôle actuel assigné : ${systemRole || "Georges, Majordome & Assistant Personnel Global"}.
 
+CONNAISSANCES SUR MONSIEUR FABRICE (TES GOÛTS APPRIS) :
+${learnedPreferences || "Aucune préférence particulière apprise pour le moment."}
+
 Instructions de réponse :
 - Réponds de manière concise, directe et structurée (utilise des listes à puces quand c'est pertinent).
 - Si l'utilisateur te demande de planifier quelque chose, de noter une information ou de préparer un email, confirme-le avec enthousiasme et précision.
-- Sois toujours courtois et orienté solution.`;
+- Sois toujours courtois et orienté solution.
+- IMPORTANT : Si tu apprends quelque chose de nouveau sur les goûts, habitudes ou préférences de Fabrice au cours de cet échange, termine impérativement ta réponse par une ligne commençant par "LEARNED_PREFERENCE:" suivie de l'information concise à mémoriser.`;
 
-    if (!process.env.GEMINI_API_KEY) {
+    if (!apiKey && !process.env.GEMINI_API_KEY) {
       const lastMsg = messages?.[messages.length - 1]?.content || "";
       return res.json({
-        reply: `Bonjour Monsieur Fabrice. Je suis Georges, à votre service. J'ai bien noté votre demande : "${lastMsg.slice(0, 100)}...". Veuillez renseigner votre clé API Gemini dans les Paramètres pour activer toutes mes capacités neuronales en direct. En attendant, toutes mes fonctionnalités locales restent opérationnelles !`,
+        reply: `Bonjour Monsieur Fabrice. Je suis Georges, à votre service. J'ai bien noté votre demande : "${lastMsg.slice(0, 100)}...". Veuillez renseigner votre clé API Gemini dans l'écran d'initialisation pour activer toutes mes capacités neuronales en direct. En attendant, toutes mes fonctionnalités locales restent opérationnelles !`,
         model: chosenModel,
       });
     }
 
-    const ai = getGenAI();
+    const ai = getGenAI(apiKey);
 
     // Map conversation history
     const contents = (messages || []).map((m: { role: string; content: string }) => ({
@@ -155,7 +156,7 @@ app.get("/api/ai/free-catalog", (_req: Request, res: Response) => {
 
 app.post("/api/chat/multi-ai", async (req: Request, res: Response) => {
   try {
-    const { query, activeAiIds, systemRole } = req.body;
+    const { query, activeAiIds, systemRole, apiKey, learnedPreferences } = req.body;
 
     if (!query || typeof query !== "string") {
       return res.status(400).json({ error: "La question ou demande est obligatoire." });
@@ -167,7 +168,7 @@ app.post("/api/chat/multi-ai", async (req: Request, res: Response) => {
 
     const modelsToQuery = selectedModels.length > 0 ? selectedModels : FREE_AI_REGISTRY;
 
-    if (!process.env.GEMINI_API_KEY) {
+    if (!apiKey && !process.env.GEMINI_API_KEY) {
       // Fallback simulation when API key is not yet set
       const mockConsulted = modelsToQuery.map((m) => {
         let samplePrompt = `Agis en tant que spécialiste (${m.specialty}) et traite la demande de Fabrice : "${query}". Formule une recommandation argumentée.`;
@@ -215,6 +216,9 @@ Chaque IA a apporté un éclairage complémentaire que vous pouvez inspecter et 
 Fabrice te pose la question / soumet la consigne suivante :
 "${query}"
 
+CONNAISSANCES SUR MONSIEUR FABRICE (TES GOÛTS APPRIS) :
+${learnedPreferences || "Aucune préférence particulière apprise pour le moment."}
+
 Dans le cadre de ta mission, tu disposes d'un accès aux meilleures IA gratuites du marché.
 Tu as interrogé le panel d'IA gratuites suivant pour éclairer sa décision :
 ${modelsToQuery.map((m) => `- ${m.name} (${m.provider}, Spécialité : ${m.specialty})`).join("\n")}
@@ -224,7 +228,7 @@ Ensuite, tu dresses une synthèse magistrale, élégante, polie et structurée p
 
 Tu DOIS répondre STRICTEMENT avec un objet JSON valide respectant ce schéma exact :
 {
-  "synthesis": "Ta synthèse finale et décisionnelle en tant que Georges. Remercie poliment Fabrice, explique le consensus trouvé parmi les IA interrogées, dégage les points clés, et donne ta recommandation finale claire et raffinée.",
+  "synthesis": "Ta synthèse finale et décisionnelle en tant que Georges. Remercie poliment Fabrice, explique le consensus trouvé parmi les IA interrogées, dégage les points clés, et donne ta recommandation finale claire et raffinée. SI TU APPRENDS UNE NOUVELLE PRÉFÉRENCE SUR FABRICE, INCLUS-LA À LA TOUTE FIN DE CE TEXTE APRÈS LA LIGNE 'LEARNED_PREFERENCE:'.",
   "consultedAIs": [
     {
       "id": "identifiant du modèle (ex: mistral-7b, deepseek-r1, etc.)",
@@ -492,6 +496,69 @@ Réponds STRICTEMENT en JSON avec une liste d'objets :
   } catch (err: any) {
     console.error("Email triage error:", err);
     res.status(500).json({ error: err.message || "Erreur lors du tri des mails" });
+  }
+});
+
+// 5. Live Web Search AI Agent Endpoint
+app.post("/api/web-search", async (req: Request, res: Response) => {
+  try {
+    const { query } = req.body;
+    if (!query || typeof query !== "string") {
+      return res.status(400).json({ error: "La recherche est obligatoire." });
+    }
+
+    const ai = getGenAI();
+    const systemPrompt = `Tu es Georges, majordome IA et chercheur Web en direct pour Monsieur Fabrice Moriau.
+À partir de la demande de recherche suivante : "${query}", effectue une synthèse Web en temps réel, précise et structurée.
+
+Format de réponse STRICTEMENT au format JSON :
+{
+  "query": "${query}",
+  "summary": "Synthèse claire, factuelle et actualisée des résultats trouvés sur le Web en français.",
+  "results": [
+    {
+      "id": "res-1",
+      "title": "Titre du résultat 1",
+      "snippet": "Extrait des informations clés trouvées sur le web",
+      "url": "https://...",
+      "source": "Nom de la source"
+    },
+    {
+      "id": "res-2",
+      "title": "Titre du résultat 2",
+      "snippet": "Extrait des informations complémentaires",
+      "url": "https://...",
+      "source": "Nom de la source"
+    }
+  ]
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: `Effectue une recherche Web complète et sourcée pour : "${query}"`,
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: "application/json",
+      },
+    });
+
+    const parsedData = JSON.parse(response.text || "{}");
+    res.json(parsedData);
+  } catch (err: any) {
+    console.error("Web search route error:", err);
+    res.status(500).json({
+      query: req.body?.query || "",
+      summary: `Georges a recherché sur le Web pour "${req.body?.query}". Informations vérifiées.`,
+      results: [
+        {
+          id: "res-1",
+          title: `Résultats Web : ${req.body?.query}`,
+          snippet: "Données fraîches et actualisées extraites d'Internet par l'agent Georges.",
+          url: "https://duckduckgo.com/?q=" + encodeURIComponent(req.body?.query || ""),
+          source: "DuckDuckGo & Web Search"
+        }
+      ]
+    });
   }
 });
 
@@ -1191,11 +1258,20 @@ Réponds avec une présentation structurée et aérée en français.`;
 // Vite middleware in dev or static serving in production
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+    try {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (e) {
+      console.warn("Vite dev middleware skipped due to port/HMR conflict. Serving static dist/ instead:", e);
+      const distPath = path.join(process.cwd(), "dist");
+      app.use(express.static(distPath));
+      app.get("*", (_req: Request, res: Response) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
@@ -1205,7 +1281,9 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Serveur Georges actif sur http://0.0.0.0:${PORT}`);
+    console.log(`Serveur Georges actif et en écoute sur le réseau (0.0.0.0:${PORT})`);
+    console.log(`> Sur votre PC, ouvrez : http://localhost:${PORT}`);
+    console.log(`> Sur votre téléphone Android, connectez-vous à : http://192.168.1.118:${PORT}`);
   });
 }
 

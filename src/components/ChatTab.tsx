@@ -28,10 +28,14 @@ import {
   Eye,
   CornerDownRight,
   Camera,
-  Monitor
+  Monitor,
+  Search,
+  Globe
 } from "lucide-react";
 import { AIChatModel, ChatMessage, ConsultedAI, CodeVaultItem } from "../types";
+import { getApiUrl } from "../utils/api";
 import { VoiceAssistant } from "./VoiceAssistant";
+import { TextToSpeech } from "@capacitor-community/text-to-speech";
 
 interface ChatTabProps {
   onNavigateToTab: (tab: string) => void;
@@ -110,16 +114,25 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   onOpenVisionModal,
   onAddCode,
 }) => {
-  // Multi-AI consultation mode active by default to fulfill user's explicit request
-  const [multiAIMode, setMultiAIMode] = useState<boolean>(true);
+  // Multi-AI consultation mode DISABLED by default.
+  // Georges will only query external AIs if specifically requested.
+  const [multiAIMode, setMultiAIMode] = useState<boolean>(false);
   const [activeFreeAIIds, setActiveFreeAIIds] = useState<string[]>([
-    "gemini-flash",
     "mistral-7b",
     "llama-3-3",
+    "gemini-flash",
     "deepseek-r1",
     "qwen-2-5",
     "duckduckgo-ai",
   ]);
+
+  const [learnedPreferences, setLearnedPreferences] = useState<string>(() => {
+    return localStorage.getItem("georges_learned_preferences") || "";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("georges_learned_preferences", learnedPreferences);
+  }, [learnedPreferences]);
   const [showAIConfig, setShowAIConfig] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -257,13 +270,17 @@ Que souhaitez-vous que nous examinions ensemble aujourd'hui ?`,
     try {
       if (multiAIMode) {
         // Query multiple free AIs orchestration endpoint
-        const res = await fetch("/api/chat/multi-ai", {
+        const apiKey = localStorage.getItem("georges_api_key") || "";
+
+        const res = await fetch(getApiUrl("/api/chat/multi-ai"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             query: text.trim(),
             activeAiIds: activeFreeAIIds,
             systemRole: selectedRole,
+            apiKey: apiKey,
+            learnedPreferences,
           }),
         });
 
@@ -273,10 +290,21 @@ Que souhaitez-vous que nous examinions ensemble aujourd'hui ?`,
 
         const data = await res.json();
 
+        // Process learned preferences from synthesis
+        let finalSynthesis = data.synthesis || "À vos ordres, Monsieur Fabrice.";
+        if (finalSynthesis.includes("LEARNED_PREFERENCE:")) {
+          const parts = finalSynthesis.split("LEARNED_PREFERENCE:");
+          finalSynthesis = parts[0].trim();
+          const newPref = parts[1].trim();
+          if (newPref) {
+            setLearnedPreferences(prev => prev + (prev ? "\n" : "") + `- ${newPref}`);
+          }
+        }
+
         const assistantMessage: ChatMessage = {
           id: `msg-${Date.now() + 1}`,
           role: "model",
-          content: data.synthesis || "À vos ordres, Monsieur Fabrice.",
+          content: finalSynthesis,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           modelUsed: `Consensus (${data.consultedAIs?.length || activeFreeAIIds.length} IA Gratuites)`,
           isMultiAIConsultation: true,
@@ -284,16 +312,85 @@ Que souhaitez-vous que nous examinions ensemble aujourd'hui ?`,
         };
 
         setMessages((prev) => [...prev, assistantMessage]);
+
+        // SYNTHÈSE VOCALE NATIVE SYNC APRÈS RÉCEPTION
+        try {
+          await TextToSpeech.speak({
+            text: assistantMessage.content.replace(/\*/g, ""),
+            lang: "fr-FR",
+            rate: 1.0,
+            pitch: 1.0,
+            volume: 1.0,
+            category: "ambient",
+          });
+        } catch (ev) {
+          console.warn("Speech Synthesis fallback error:", ev);
+        }
+
         return assistantMessage.content;
       } else {
-        // Single model direct chat
-        const res = await fetch("/api/chat", {
+        // Single model direct chat (Mode Georges direct sans consultation IA externe systématique)
+        const apiKey = localStorage.getItem("georges_api_key") || "";
+        const baseUrl = getApiUrl("");
+
+        // Si c'est une commande simple de salutation, de politesse ou de navigation, Georges répond directement
+        const lowerInput = text.toLowerCase().trim();
+        const socialPhrases = [
+          "bonjour", "salut", "georges", "ça va", "ca va", "comment vas-tu",
+          "tu vas bien", "qui es-tu", "merci", "au revoir", "bonne nuit",
+          "est-ce que tu m'entends", "tu m'entends"
+        ];
+
+        const isSocial = socialPhrases.some(phrase => lowerInput.includes(phrase)) && text.split(" ").length < 6;
+
+        if (isSocial) {
+          let resp = "Je vais à merveille, Monsieur Fabrice. Mes systèmes sont nominaux et je suis prêt à vous assister. Que puis-je faire pour vous ?";
+
+          if (lowerInput.includes("bonjour") || lowerInput.includes("salut")) {
+            resp = "Bonjour Monsieur Fabrice. Je suis à votre entière disposition. Comment se déroule votre journée ?";
+          } else if (lowerInput.includes("qui es-tu")) {
+            resp = "Je suis Georges, votre assistant personnel et majordome numérique. Je suis ici pour gérer vos emails, votre agenda, vos finances et votre serveur domestique.";
+          } else if (lowerInput.includes("merci")) {
+            resp = "C'est un plaisir de vous servir, Monsieur Fabrice. N'hésitez pas si vous avez besoin d'autre chose.";
+          } else if (lowerInput.includes("m'entends")) {
+            resp = "Je vous entends parfaitement, Monsieur Fabrice. La liaison vocale est établie et sécurisée.";
+          }
+
+          const msg: ChatMessage = {
+            id: `msg-${Date.now()}`,
+            role: "model",
+            content: resp,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            modelUsed: "Georges (Direct)",
+          };
+          setMessages((prev) => [...prev, msg]);
+
+          // SYNTHÈSE VOCALE NATIVE
+          try {
+            await TextToSpeech.speak({
+              text: resp,
+              lang: "fr-FR",
+              rate: 1.0,
+              pitch: 1.0,
+              volume: 1.0,
+              category: "ambient",
+            });
+          } catch (ev) {
+            console.warn("Direct Speech Synthesis error:", ev);
+          }
+
+          return resp;
+        }
+
+        const res = await fetch(getApiUrl("/api/chat"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: newHistory.map((m) => ({ role: m.role, content: m.content })),
             model: selectedModel,
             systemRole: selectedRole,
+            apiKey: apiKey,
+            learnedPreferences,
           }),
         });
 
@@ -303,16 +400,42 @@ Que souhaitez-vous que nous examinions ensemble aujourd'hui ?`,
 
         const data = await res.json();
 
+        // Process learned preferences from reply
+        let finalReply = data.reply || "À vos ordres, Monsieur.";
+        if (finalReply.includes("LEARNED_PREFERENCE:")) {
+          const parts = finalReply.split("LEARNED_PREFERENCE:");
+          finalReply = parts[0].trim();
+          const newPref = parts[1].trim();
+          if (newPref) {
+            setLearnedPreferences(prev => prev + (prev ? "\n" : "") + `- ${newPref}`);
+          }
+        }
+
         const assistantMessage: ChatMessage = {
           id: `msg-${Date.now() + 1}`,
           role: "model",
-          content: data.reply || "À vos ordres, Monsieur.",
+          content: finalReply,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           modelUsed: data.model || selectedModel,
           isMultiAIConsultation: false,
         };
 
         setMessages((prev) => [...prev, assistantMessage]);
+
+        // SYNTHÈSE VOCALE NATIVE
+        try {
+          await TextToSpeech.speak({
+            text: assistantMessage.content.replace(/\*/g, ""),
+            lang: "fr-FR",
+            rate: 1.0,
+            pitch: 1.0,
+            volume: 1.0,
+            category: "ambient",
+          });
+        } catch (ev) {
+          console.warn("Response Speech Synthesis error:", ev);
+        }
+
         return assistantMessage.content;
       }
 
@@ -349,6 +472,51 @@ Les IA gratuites préconisent de structurer cette démarche pas-à-pas. Vous pou
       };
       setMessages((prev) => [...prev, fallbackMsg]);
       return fallbackMsg.content;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWebSearch = async (queryToSearch?: string) => {
+    const q = queryToSearch || input;
+    if (!q.trim() || loading) return;
+
+    const userMessage: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      role: "user",
+      content: `🔍 Recherche Web en direct : ${q}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const res = await fetch(getApiUrl("/api/web-search"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q }),
+      });
+
+      const data = await res.json();
+      const resultsFormatted = (data.results || [])
+        .map((r: any) => `• **${r.title}**\n  _${r.snippet}_\n  Source: ${r.source}`)
+        .join("\n\n");
+
+      const responseText = `🔍 **Résultats de Recherche Web pour "${q}"** :\n\n${data.summary}\n\n${resultsFormatted}`;
+
+      const assistantMessage: ChatMessage = {
+        id: `msg-${Date.now() + 1}`,
+        role: "model",
+        content: responseText,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        modelUsed: "Georges Web Search (En direct)",
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err) {
+      console.error("Web Search Error:", err);
     } finally {
       setLoading(false);
     }
@@ -663,7 +831,7 @@ Les IA gratuites préconisent de structurer cette démarche pas-à-pas. Vous pou
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-130px)] max-w-6xl mx-auto px-2 sm:px-4 py-3">
+    <div className="flex flex-col h-[calc(100vh-80px)] max-w-7xl mx-auto px-1 sm:px-4 py-2">
       {/* Butler Voice Assistant Activation Bar */}
       <VoiceAssistant 
         onVoiceCommand={handleVoiceCommand}
@@ -716,21 +884,33 @@ Les IA gratuites préconisent de structurer cette démarche pas-à-pas. Vous pou
                 <span>Panel IA Gratuites ({activeFreeAIIds.length}/{AVAILABLE_FREE_AIS.length})</span>
                 {showAIConfig ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
-            ) : (
-              /* Single Model Picker */
-              <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200 text-xs">
-                <span className="text-[11px] text-slate-400 px-1">Moteur :</span>
-                {(["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite"] as AIChatModel[]).map((m) => (
+            ) : null}
+
+            {learnedPreferences && (
+              <div className="group relative">
+                <button className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-help">
+                  <BrainCircuit className="w-3 h-3" />
+                  <span>Mémoire Active</span>
+                </button>
+                <div className="absolute top-full right-0 mt-2 w-64 p-3 bg-white border border-indigo-200 rounded-xl shadow-xl z-50 invisible group-hover:visible animate-in fade-in zoom-in-95 duration-200">
+                  <h4 className="text-[11px] font-black uppercase text-indigo-900 mb-2 flex items-center gap-2">
+                    <Zap className="w-3 h-3" />
+                    Georges a appris sur vous :
+                  </h4>
+                  <div className="text-[10px] text-indigo-800 space-y-1 font-medium max-h-48 overflow-y-auto whitespace-pre-line">
+                    {learnedPreferences}
+                  </div>
                   <button
-                    key={m}
-                    onClick={() => setSelectedModel(m)}
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                      selectedModel === m ? "bg-white text-slate-900 font-bold shadow-2xs border border-slate-200" : "text-slate-500 hover:text-slate-900"
-                    }`}
+                    onClick={() => {
+                      if(confirm("Voulez-vous réinitialiser la mémoire de Georges ?")) {
+                        setLearnedPreferences("");
+                      }
+                    }}
+                    className="mt-3 text-[9px] text-rose-600 hover:text-rose-800 font-bold underline cursor-pointer"
                   >
-                    {m.replace("gemini-", "")}
+                    Effacer la mémoire
                   </button>
-                ))}
+                </div>
               </div>
             )}
           </div>
@@ -1106,7 +1286,7 @@ Les IA gratuites préconisent de structurer cette démarche pas-à-pas. Vous pou
       <div className="mt-1 bg-white rounded-2xl border border-slate-300 p-2 shadow-xs focus-within:border-slate-800 focus-within:ring-1 focus-within:ring-slate-800 transition-all">
         <div className="flex items-end gap-2">
           
-          {/* Vision Quick Triggers: Phone Camera & Screenshot */}
+          {/* Vision Quick Triggers: Phone Camera, Screenshot & Web Search */}
           <div className="flex items-center gap-1 pb-1">
             <button
               onClick={() => onOpenVisionModal?.("photo")}
@@ -1121,6 +1301,18 @@ Les IA gratuites préconisent de structurer cette démarche pas-à-pas. Vous pou
               title="Faire une capture d'écran pour analyse"
             >
               <Monitor className="w-4 h-4 text-amber-600" />
+            </button>
+            <button
+              onClick={() => handleWebSearch()}
+              disabled={!input.trim() || loading}
+              className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                input.trim()
+                  ? "text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300"
+                  : "text-slate-400 bg-slate-50 hover:bg-slate-100 border border-slate-200"
+              }`}
+              title="Rechercher sur le Web en direct"
+            >
+              <Globe className="w-4 h-4 text-emerald-600" />
             </button>
           </div>
 

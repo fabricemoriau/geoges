@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { HomeServerInfo, ServerFile } from "../types";
 import { sampleFiles } from "../data/initialData";
+import { getApiUrl } from "../utils/api";
 
 interface HomeServerTabProps {
   onAddNote: (title: string, content: string, category: "Personnel" | "Travail" | "Serveur" | "Idées") => void;
@@ -37,13 +38,14 @@ export const HomeServerTab: React.FC<HomeServerTabProps> = ({ onAddNote }) => {
 
   const fetchServerTelemetry = async () => {
     setIsRefreshing(true);
+
     try {
-      const res = await fetch("/api/server/status");
+      const res = await fetch(getApiUrl("/api/server/status"));
       if (res.ok) {
         const data = await res.json();
         setServerInfo(data);
       }
-      const filesRes = await fetch("/api/server/files");
+      const filesRes = await fetch(getApiUrl("/api/server/files"));
       if (filesRes.ok) {
         const fData = await filesRes.json();
         setFiles(fData);

@@ -11,18 +11,19 @@ import {
   Mic, 
   MicOff, 
   RefreshCw, 
-  SlidersHorizontal, 
-  Bookmark, 
-  History, 
-  Trash2, 
-  ShieldCheck,
-  AlertCircle,
-  Clock,
-  ArrowRight,
-  ExternalLink,
-  Pencil
+  Trash2,
+  Briefcase,
+  Award,
+  Download,
+  Building,
+  MapPin,
+  CheckCircle2,
+  Cpu,
+  Layers
 } from "lucide-react";
-import { GeneratedLetter } from "../types";
+import { GeneratedLetter, JobOfferItem, TailoredResume, ConsultedAI } from "../types";
+import { initialJobOffers, initialTailoredResumes } from "../data/initialData";
+import { getApiUrl } from "../utils/api";
 
 interface LettersTabProps {
   onSaveAsNote: (title: string, content: string, category: "Personnel" | "Travail" | "Serveur" | "Idées") => void;
@@ -33,6 +34,10 @@ export const LettersTab: React.FC<LettersTabProps> = ({
   onSaveAsNote,
   onSendAsEmail,
 }) => {
+  // Main Tab Navigation
+  const [activeTab, setActiveTab] = useState<"letters" | "jobsearch" | "cv" | "multi_ai">("letters");
+
+  // Rédacteur de Courrier State
   const [docType, setDocType] = useState<"courrier" | "email">("courrier");
   const [instructions, setInstructions] = useState("");
   const [senderName, setSenderName] = useState("Fabrice Moriau");
@@ -49,6 +54,19 @@ export const LettersTab: React.FC<LettersTabProps> = ({
   const [copied, setCopied] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState<string | null>(null);
 
+  // Job Search State
+  const [jobOffers, setJobOffers] = useState<JobOfferItem[]>(initialJobOffers);
+  const [selectedJob, setSelectedJob] = useState<JobOfferItem | null>(jobOffers[0] || null);
+
+  // Tailored Resume State
+  const [resumes, setResumes] = useState<TailoredResume[]>(initialTailoredResumes);
+  const [selectedResume, setSelectedResume] = useState<TailoredResume | null>(resumes[0] || null);
+  const [isGeneratingCV, setIsGeneratingCV] = useState(false);
+
+  // Multi-AI Free Consensus State
+  const [isConsultingMultiAI, setIsConsultingMultiAI] = useState(false);
+  const [multiAIConsensus, setMultiAIConsensus] = useState<{ synthesis: string; consultedAIs: ConsultedAI[] } | null>(null);
+
   // Stored history
   const [history, setHistory] = useState<GeneratedLetter[]>(() => {
     const saved = localStorage.getItem("georges_saved_letters");
@@ -59,22 +77,22 @@ export const LettersTab: React.FC<LettersTabProps> = ({
       {
         id: "sample-letter-1",
         documentType: "courrier",
-        title: "Demande de résiliation abonnement avec préavis",
-        dateLocation: "Paris, le 21 septembre 2026",
-        senderBlock: "Fabrice Moriau\n14 Rue des Lilas, 75011 Paris\nfabrice.moriau@gmail.com",
-        recipientBlock: "Service Résiliation Clients\nOpérateur Télécom\n75008 Paris",
-        subject: "Objet : Demande de résiliation de mon abonnement box - Contrat N° 8492019",
-        salutation: "Madame, Monsieur le Responsable,",
+        title: "Lettre de Motivation - Responsable Sécurité",
+        dateLocation: "Paris, le " + new Date().toLocaleDateString("fr-FR"),
+        senderBlock: "Fabrice Moriau\nfrancemaisonsecurite@gmail.com",
+        recipientBlock: "Securitas & Protection Pro\nDirection des Ressources Humaines",
+        subject: "Objet : Candidature au poste de Responsable Sécurité & Systèmes de Surveillance",
+        salutation: "Madame, Monsieur le Directeur,",
         bodyParagraphs: [
-          "Par la présente lettre recommandée avec accusé de réception, je vous notifie ma décision de résilier mon contrat d'abonnement internet susmentionné, souscrit auprès de vos services.",
-          "Conformément aux conditions générales de vente et à l'article L. 224-39 du Code de la consommation, je vous saurais gré de bien vouloir prendre en compte cette résiliation à compter du terme de mon préavis contractuel.",
-          "Je vous remercie de m'adresser dans les meilleurs délais une confirmation écrite de cette résiliation, ainsi que la procédure de restitution des équipements mis à ma disposition.",
+          "Fort d'une solide expérience terrain en tant que Responsable Technique de France Maison Sécurité et professionnel de santé sanitaire, je vous adresse ma candidature pour le poste de Responsable Sécurité.",
+          "Mon expertise éprouvée dans l'installation de centrales alarme, caméras IP 4K et gestion automatisée des dossiers clients via l'agent IA Georges constitue un atout majeur pour optimiser vos opérations.",
+          "Disponible immédiatement, je serais ravi de vous rencontrer lors d'un entretien afin de vous exposer mes motivations.",
         ],
         valediction: "Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.",
         signature: "Fabrice Moriau",
-        fullText: `Fabrice Moriau\n14 Rue des Lilas, 75011 Paris\nfabrice.moriau@gmail.com\n\nÀ l'attention de :\nService Résiliation Clients\nOpérateur Télécom\n75008 Paris\n\nParis, le 21 septembre 2026\n\nObjet : Demande de résiliation de mon abonnement box - Contrat N° 8492019\n\nMadame, Monsieur le Responsable,\n\nPar la présente lettre recommandée avec accusé de réception, je vous notifie ma décision de résilier mon contrat d'abonnement internet susmentionné, souscrit auprès de vos services.\n\nConformément aux conditions générales de vente et à l'article L. 224-39 du Code de la consommation, je vous saurais gré de bien vouloir prendre en compte cette résiliation à compter du terme de mon préavis contractuel.\n\nJe vous remercie de m'adresser dans les meilleurs délais une confirmation écrite de cette résiliation, ainsi que la procédure de restitution des équipements mis à ma disposition.\n\nJe vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\nFabrice Moriau`,
-        georgesAdvice: "Conseil de Georges : pensez à conserver le récépissé postal et à photographier le matériel avant expédition dans son emballage d'origine.",
-        createdAt: "2026-09-20",
+        fullText: `Fabrice Moriau\nfrancemaisonsecurite@gmail.com\n\nÀ l'attention de :\nSecuritas & Protection Pro\nDirection des Ressources Humaines\n\nParis, le ${new Date().toLocaleDateString("fr-FR")}\n\nObjet : Candidature au poste de Responsable Sécurité & Systèmes de Surveillance\n\nMadame, Monsieur le Directeur,\n\nFort d'une solide expérience terrain en tant que Responsable Technique de France Maison Sécurité et professionnel de santé sanitaire, je vous adresse ma candidature pour le poste de Responsable Sécurité.\n\nMon expertise éprouvée dans l'installation de centrales alarme, caméras IP 4K et gestion automatisée des dossiers clients via l'agent IA Georges constitue un atout majeur pour optimiser vos opérations.\n\nDisponible immédiatement, je serais ravi de vous rencontrer lors d'un entretien afin de vous exposer mes motivations.\n\nJe vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\nFabrice Moriau`,
+        georgesAdvice: "Conseil de Georges : CV adapté joint, score de correspondance de 96%.",
+        createdAt: new Date().toISOString().split("T")[0],
       }
     ];
   });
@@ -89,7 +107,6 @@ export const LettersTab: React.FC<LettersTabProps> = ({
     }
   }, [history, currentLetter]);
 
-  // Voice dictation using Web Speech API
   const handleToggleDictation = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -130,7 +147,7 @@ export const LettersTab: React.FC<LettersTabProps> = ({
     setSavedSuccess(null);
 
     try {
-      const res = await fetch("/api/letter/generate", {
+      const res = await fetch(getApiUrl("/api/letter/generate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -170,7 +187,6 @@ export const LettersTab: React.FC<LettersTabProps> = ({
       setHistory((prev) => [newDoc, ...prev]);
     } catch (err: any) {
       console.error("Generate letter error:", err);
-      // Fallback
       const fallback: GeneratedLetter = {
         id: `doc-${Date.now()}`,
         documentType: docType,
@@ -197,6 +213,82 @@ export const LettersTab: React.FC<LettersTabProps> = ({
     }
   };
 
+  // Generate Tailored CV for selected job offer
+  const handleGenerateTailoredCV = (job: JobOfferItem) => {
+    setIsGeneratingCV(true);
+    setTimeout(() => {
+      const newCV: TailoredResume = {
+        id: `cv-${Date.now()}`,
+        title: `CV Optimisé ATS - ${job.title}`,
+        targetJobTitle: job.title,
+        profileSummary: `Expert confirmé combinant 5+ ans de direction d'installations en sécurité privée (France Maison Sécurité) et régulation sanitaire d'urgence. Candidat directement opérationnel pour ${job.company}.`,
+        keySkills: job.keyRequirements,
+        experiences: [
+          {
+            role: "Responsable Technique & Installations",
+            company: "France Maison Sécurité",
+            duration: "2021 - Présent",
+            description: "Direction opérationnelle et suivi automatisé de dossiers de télésurveillance et alarme.",
+            bulletPoints: [
+              "Supervision globale de 150+ installations vidéo IP et contrôle d'accès",
+              "Gestion autonome des devis et relations clients via le majordome IA Georges"
+            ]
+          },
+          {
+            role: "Ambulancier & Régulation Sanitaire",
+            company: "Transport Sanitaire ASSU / SAMU",
+            duration: "2018 - Présent",
+            description: "Interventions d'urgence et gestion de plannings.",
+            bulletPoints: [
+              "Gestion des tournées de garde et conception de l'application AmbuGuard Pro"
+            ]
+          }
+        ],
+        education: [
+          {
+            degree: "Diplôme d'État d'Ambulancier (DEA)",
+            school: "IFA Santé",
+            year: "2018"
+          }
+        ],
+        tailoredForJobId: job.id,
+        createdAt: new Date().toLocaleDateString("fr-FR")
+      };
+
+      setResumes([newCV, ...resumes]);
+      setSelectedResume(newCV);
+      setActiveTab("cv");
+      setIsGeneratingCV(false);
+    }, 1200);
+  };
+
+  // Trigger Multi-AI Free Consensus Consultation
+  const handleConsultMultiAI = async (queryText: string) => {
+    setIsConsultingMultiAI(true);
+    try {
+      const res = await fetch("/api/chat/multi-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: `Analyse et valide ma candidature / CV / Lettre : "${queryText}". Donne-moi les conseils pour maximiser le taux de réponse.`,
+          activeAiIds: ["gemini-flash", "mistral-7b", "llama-3-3", "deepseek-r1", "qwen-2-5", "duckduckgo-ai"]
+        })
+      });
+
+      if (!res.ok) throw new Error("Erreur multi-IA");
+      const data = await res.json();
+      setMultiAIConsensus({
+        synthesis: data.synthesis,
+        consultedAIs: data.consultedAIs || []
+      });
+      setActiveTab("multi_ai");
+    } catch (err) {
+      console.error("Multi-AI consultation error:", err);
+    } finally {
+      setIsConsultingMultiAI(false);
+    }
+  };
+
   const handleCopyText = () => {
     if (!currentLetter) return;
     navigator.clipboard.writeText(currentLetter.fullText);
@@ -204,436 +296,442 @@ export const LettersTab: React.FC<LettersTabProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleSaveNote = () => {
-    if (!currentLetter) return;
-    onSaveAsNote(
-      `Courrier : ${currentLetter.subject.replace("Objet :", "").trim()}`,
-      currentLetter.fullText,
-      "Travail"
-    );
-    setSavedSuccess("Courrier enregistré dans vos Notes avec succès !");
-    setTimeout(() => setSavedSuccess(null), 3000);
-  };
-
-  const quickTemplates = [
-    {
-      title: "Résiliation de contrat / box",
-      type: "courrier" as const,
-      prompt: "Résiliation sans frais de mon abonnement internet box pour déménagement avec accusé de réception",
-      recipient: "Service Clients Télécom",
-      tone: "Formel et juridique",
-    },
-    {
-      title: "Demande d'échéancier ou délai",
-      type: "courrier" as const,
-      prompt: "Demande polie et argumentée d'un étalement de paiement en 3 fois sans pénalité pour facture imprévue",
-      recipient: "Service Comptabilité / Recouvrement",
-      tone: "Courtois et professionnel",
-    },
-    {
-      title: "Relance client devis impayé",
-      type: "email" as const,
-      prompt: "Relance élégante mais ferme pour le règlement de la facture arrivée à échéance depuis 10 jours",
-      recipient: "Monsieur le Directeur Financier",
-      tone: "Ferme et déterminé",
-    },
-    {
-      title: "Remerciements & Proposition",
-      type: "email" as const,
-      prompt: "Remerciements chaleureux suite à notre échange et proposition d'un prochain point d'étape",
-      recipient: "Marc Dupont",
-      tone: "Chaleureux et bienveillant",
-    },
-  ];
-
-  const applyTemplate = (t: typeof quickTemplates[0]) => {
-    setDocType(t.type);
-    setInstructions(t.prompt);
-    setRecipientName(t.recipient);
-    setTone(t.tone);
-  };
-
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5">
-      {/* Header Banner */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs mb-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="p-2 bg-slate-900 text-amber-400 rounded-xl">
-                <FileText className="w-5 h-5" />
-              </div>
-              <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-                Rédacteur de Courriers & Mails sur-mesure
-              </h2>
-              <span className="text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full">
-                À votre convenance
-              </span>
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-5 space-y-6">
+      {/* Top Navigation Banner */}
+      <div className="bg-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xl shadow-md">
+              <FileText className="w-6 h-6" />
             </div>
-            <p className="text-xs text-slate-500 max-w-2xl">
-              Confiez à Georges la rédaction de vos lettres officielles, démarches administratives, courriers de résiliation ou courriels personnalisés selon vos critères exacts.
-            </p>
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                <span>Rédacteur, Emploi & CV Sur-Mesure</span>
+                <span className="text-xs bg-amber-400/20 text-amber-300 font-semibold px-2.5 py-0.5 rounded-full border border-amber-400/30">
+                  Consensus Multi-IA
+                </span>
+              </h2>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Courriers officiels, recherche d'emploi et CV personnalisés validés par les IA gratuites
+              </p>
+            </div>
           </div>
 
-          {/* Quick Stats or Doc Type selector */}
-          <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 shrink-0">
+          <div className="flex items-center gap-1.5 bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700 overflow-x-auto">
             <button
-              onClick={() => setDocType("courrier")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                docType === "courrier"
-                  ? "bg-white text-slate-900 shadow-xs border border-slate-200"
-                  : "text-slate-500 hover:text-slate-900"
+              onClick={() => setActiveTab("letters")}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === "letters"
+                  ? "bg-amber-400 text-slate-950 shadow-md"
+                  : "text-slate-300 hover:text-white"
               }`}
             >
-              <FileText className="w-4 h-4 text-amber-600" />
-              <span>Courrier Papier (A4 Officiel)</span>
+              Rédacteur Courrier/Mail
             </button>
             <button
-              onClick={() => setDocType("email")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                docType === "email"
-                  ? "bg-white text-slate-900 shadow-xs border border-slate-200"
-                  : "text-slate-500 hover:text-slate-900"
+              onClick={() => setActiveTab("jobsearch")}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === "jobsearch"
+                  ? "bg-amber-400 text-slate-950 shadow-md"
+                  : "text-slate-300 hover:text-white"
               }`}
             >
-              <Mail className="w-4 h-4 text-indigo-600" />
-              <span>Email Personnalisé</span>
+              Recherche d'Emploi ({jobOffers.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("cv")}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === "cv"
+                  ? "bg-amber-400 text-slate-950 shadow-md"
+                  : "text-slate-300 hover:text-white"
+              }`}
+            >
+              CV Sur-Mesure ({resumes.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("multi_ai")}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === "multi_ai"
+                  ? "bg-amber-400 text-slate-950 shadow-md"
+                  : "text-slate-300 hover:text-white"
+              }`}
+            >
+              Consensus Multi-IA Gratuites
             </button>
           </div>
-        </div>
-
-        {/* Quick Inspiration Templates */}
-        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <span className="text-[11px] font-semibold text-slate-400 shrink-0">Modèles rapides :</span>
-          {quickTemplates.map((t, idx) => (
-            <button
-              key={idx}
-              onClick={() => applyTemplate(t)}
-              className="text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 shrink-0 transition-colors flex items-center gap-1"
-            >
-              {t.type === "courrier" ? <FileText className="w-3 h-3 text-amber-500" /> : <Mail className="w-3 h-3 text-indigo-500" />}
-              <span>{t.title}</span>
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* Main Grid: Input Form (Left) & Live Document Output (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
-        {/* Left Column: Form Controls */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3.5">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-              <Pencil className="w-3.5 h-3.5 text-amber-500" />
-              Vos Consignes pour Georges
-            </h3>
-
-            {/* Instruction Textarea with Voice Dictation */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-700">
-                  Décrivez ce que vous souhaitez écrire :
-                </label>
-                <button
-                  type="button"
-                  onClick={handleToggleDictation}
-                  className={`text-[11px] flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-colors ${
-                    isDictating
-                      ? "bg-rose-100 text-rose-700 animate-pulse"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                  title="Dicter à la voix"
-                >
-                  {isDictating ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3 text-amber-600" />}
-                  <span>{isDictating ? "Écoute en cours..." : "Dicter"}</span>
-                </button>
-              </div>
-              <textarea
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-                rows={4}
-                placeholder="Ex : Écris une lettre pour résilier mon contrat box sans frais car le débit n'est pas conforme au contrat. Reste très courtois mais ferme."
-                className="w-full text-xs sm:text-sm p-3 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-slate-900 bg-slate-50/50"
-              />
-            </div>
-
-            {/* Recipient Details */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Destinataire (Nom ou Service)
-                </label>
-                <input
-                  type="text"
-                  value={recipientName}
-                  onChange={(e) => setRecipientName(e.target.value)}
-                  placeholder="Ex : Service Client Free / M. Le Maire"
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                />
+      {/* TAB 1: RÉDACTEUR DE COURRIER / MAIL */}
+      {activeTab === "letters" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Controls (5 cols) */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-white rounded-3xl border border-slate-200 p-5 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between border-b pb-3">
+                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  Rédacteur Assisté par Georges
+                </h3>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Adresse postale ou email destinataire
-                </label>
-                <input
-                  type="text"
-                  value={recipientAddress}
-                  onChange={(e) => setRecipientAddress(e.target.value)}
-                  placeholder="Ex : 75008 Paris / contact@..."
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                />
-              </div>
-            </div>
-
-            {/* Tone & Length Selectors */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Tonalité souhaitée
-                </label>
-                <select
-                  value={tone}
-                  onChange={(e) => setTone(e.target.value)}
-                  className="w-full text-xs p-2 rounded-xl border border-slate-200 bg-white"
-                >
-                  <option value="Courtois et professionnel">Courtois & Professionnel</option>
-                  <option value="Formel et juridique">Formel & Juridique</option>
-                  <option value="Ferme et déterminé">Ferme & Déterminé</option>
-                  <option value="Chaleureux et bienveillant">Chaleureux & Bienveillant</option>
-                  <option value="Diplomatique et nuancé">Diplomatique & Nuancé</option>
-                  <option value="Concis et direct">Concis & Direct</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Longueur du texte
-                </label>
-                <div className="flex gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
-                  {(["court", "standard", "detaille"] as const).map((l) => (
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block font-semibold text-slate-800 mb-1">
+                    Que souhaitez-vous rédiger ? *
+                  </label>
+                  <div className="relative">
+                    <textarea
+                      value={instructions}
+                      onChange={(e) => setInstructions(e.target.value)}
+                      rows={4}
+                      placeholder="Ex: Lettre de motivation pour poste de Responsable Sécurité..."
+                      className="w-full border border-slate-300 rounded-xl p-3 focus:outline-hidden bg-slate-50/50"
+                    />
                     <button
-                      key={l}
                       type="button"
-                      onClick={() => setLength(l)}
-                      className={`flex-1 py-1 rounded-lg text-[11px] font-semibold capitalize transition-all ${
-                        length === l
-                          ? "bg-white text-slate-900 shadow-2xs border border-slate-200"
-                          : "text-slate-500 hover:text-slate-900"
+                      onClick={handleToggleDictation}
+                      className={`absolute right-3 bottom-3 p-2 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all ${
+                        isDictating ? "bg-rose-500 text-white animate-pulse" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
                       }`}
                     >
-                      {l === "detaille" ? "Détaillé" : l}
+                      {isDictating ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
                     </button>
-                  ))}
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Destinataire</label>
+                    <input
+                      type="text"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                      placeholder="Ex: Securitas DRH"
+                      className="w-full border rounded-xl p-2 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Tonalité</label>
+                    <input
+                      type="text"
+                      value={tone}
+                      onChange={(e) => setTone(e.target.value)}
+                      className="w-full border rounded-xl p-2 bg-white"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleGenerate}
+                  disabled={!instructions.trim() || loading}
+                  className={`w-full py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-md transition-all ${
+                    instructions.trim() && !loading
+                      ? "bg-slate-900 hover:bg-slate-800 text-amber-400 cursor-pointer"
+                      : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                  }`}
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+                      <span>RÉDACTION PAR GEORGES...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <span>Générer le Document Officiel</span>
+                    </>
+                  )}
+                </button>
+
+                {currentLetter && (
+                  <button
+                    onClick={() => handleConsultMultiAI(currentLetter.fullText)}
+                    disabled={isConsultingMultiAI}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 flex items-center justify-center gap-2"
+                  >
+                    <Cpu className="w-4 h-4 text-indigo-600" />
+                    <span>Soumettre au Consensus Multi-IA Gratuites</span>
+                  </button>
+                )}
               </div>
             </div>
-
-            {/* Sender block adjustment (foldable/subtle) */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
-                <span>Expéditeur par défaut : <strong>{senderName}</strong></span>
-              </div>
-            </div>
-
-            {/* Main Action Submit Button */}
-            <button
-              onClick={handleGenerate}
-              disabled={!instructions.trim() || loading}
-              className={`w-full py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer ${
-                instructions.trim() && !loading
-                  ? "bg-slate-900 text-amber-400 hover:bg-slate-800"
-                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
-              }`}
-            >
-              {loading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-amber-500" />
-                  <span>Georges rédige votre {docType === "courrier" ? "courrier" : "email"}...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>Georges, rédigez ce {docType === "courrier" ? "courrier" : "email"}</span>
-                </>
-              )}
-            </button>
           </div>
 
-          {/* History List */}
-          {history.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <History className="w-3.5 h-3.5 text-slate-400" />
-                  Documents rédigés récemment ({history.length})
-                </span>
+          {/* Document Preview (7 cols) */}
+          <div className="lg:col-span-7">
+            {currentLetter ? (
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 shadow-xs">
+                <div className="flex items-center justify-between border-b pb-3">
+                  <h3 className="font-bold text-slate-900 text-base">{currentLetter.title}</h3>
+                  <span className="text-xs text-slate-400">{currentLetter.createdAt}</span>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl text-xs sm:text-sm text-slate-800 whitespace-pre-line font-serif leading-relaxed">
+                  {currentLetter.fullText}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={handleCopyText}
+                    className="bg-slate-900 text-amber-400 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>{copied ? "Copié !" : "Copier le texte"}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
+                Rédigez un courrier pour afficher l'aperçu.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: RECHERCHE D'EMPLOI */}
+      {activeTab === "jobsearch" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Job List (5 cols) */}
+          <div className="lg:col-span-5 space-y-3">
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1 shadow-xs">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-indigo-600" />
+                Offres d'Emploi Ciblées sur le Web
+              </h3>
+              <p className="text-xs text-slate-500">
+                Offres correspondant au profil de M. Moriau (Sécurité, Ambulance, Direction).
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-xs">
+              {jobOffers.map((job) => (
+                <div
+                  key={job.id}
+                  onClick={() => setSelectedJob(job)}
+                  className={`p-4 cursor-pointer text-xs space-y-2 transition-colors ${
+                    selectedJob?.id === job.id ? "bg-indigo-50/80 border-l-4 border-indigo-600" : "hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 text-xs">{job.title}</span>
+                    <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">
+                      Match {job.matchScore}%
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] text-slate-600 font-medium">
+                    {job.company} &middot; {job.location} ({job.contractType})
+                  </div>
+
+                  <div className="text-[10px] text-slate-400">Publié : {job.postedDate}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Selected Job Detail & CV Trigger (7 cols) */}
+          <div className="lg:col-span-7">
+            {selectedJob ? (
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 shadow-xs">
+                <div className="border-b pb-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="bg-indigo-600 text-white font-bold text-xs px-3 py-1 rounded-full">
+                      {selectedJob.contractType}
+                    </span>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                      Rémunération : {selectedJob.salary || "Selon profil"}
+                    </span>
+                  </div>
+
+                  <h2 className="text-lg font-bold text-slate-900">{selectedJob.title}</h2>
+                  <p className="text-xs text-slate-600">
+                    Société : <strong>{selectedJob.company}</strong> &middot; Lieu : <strong>{selectedJob.location}</strong>
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase">Description du poste</h4>
+                  <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    {selectedJob.description}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase">Compétences clés recherchées</h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedJob.keyRequirements.map((req, idx) => (
+                      <span key={idx} className="bg-indigo-50 text-indigo-800 text-xs font-semibold px-2.5 py-1 rounded-lg border border-indigo-100">
+                        {req}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => handleGenerateTailoredCV(selectedJob)}
+                    disabled={isGeneratingCV}
+                    className="flex-1 bg-slate-900 hover:bg-slate-800 text-amber-400 py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                  >
+                    <Award className="w-4 h-4 text-amber-400" />
+                    <span>Générer le CV Sur-Mesure pour cette offre</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
+                Sélectionnez une offre pour afficher le détail.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: CV SUR-MESURE */}
+      {activeTab === "cv" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* CVs list (4 cols) */}
+          <div className="lg:col-span-4 space-y-3">
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1 shadow-xs">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Award className="w-4 h-4 text-indigo-600" />
+                Vos CV Sur-Mesure
+              </h3>
+              <p className="text-xs text-slate-500">CV optimisés ATS personnalisés par Georges.</p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-xs">
+              {resumes.map((cv) => (
+                <div
+                  key={cv.id}
+                  onClick={() => setSelectedResume(cv)}
+                  className={`p-3.5 cursor-pointer text-xs space-y-1 transition-colors ${
+                    selectedResume?.id === cv.id ? "bg-indigo-50/80 border-l-4 border-indigo-600" : "hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="font-bold text-slate-900 text-xs">{cv.title}</div>
+                  <div className="text-[11px] text-slate-500">{cv.targetJobTitle}</div>
+                  <div className="text-[10px] text-slate-400">Créé le : {cv.createdAt}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Selected CV Display (8 cols) */}
+          <div className="lg:col-span-8">
+            {selectedResume ? (
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 shadow-xs">
+                <div className="border-b pb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">{selectedResume.title}</h2>
+                    <p className="text-xs text-slate-500">Cible : {selectedResume.targetJobTitle}</p>
+                  </div>
+                  <span className="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">
+                    Format ATS Valide
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase">Résumé de Profil</h4>
+                  <p className="text-xs text-slate-700 leading-relaxed">{selectedResume.profileSummary}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase">Expériences Professionnelles</h4>
+                  <div className="space-y-3">
+                    {selectedResume.experiences.map((exp, idx) => (
+                      <div key={idx} className="bg-white border border-slate-200 p-4 rounded-2xl space-y-1">
+                        <div className="font-bold text-xs text-slate-900">{exp.role} - {exp.company}</div>
+                        <div className="text-[10px] text-slate-400">{exp.duration}</div>
+                        <p className="text-xs text-slate-600 mt-1">{exp.description}</p>
+                        <ul className="list-disc list-inside text-xs text-slate-700 pt-1 space-y-0.5">
+                          {exp.bulletPoints.map((bp, bidx) => (
+                            <li key={bidx}>{bp}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t flex justify-end gap-2">
+                  <button
+                    onClick={() => handleConsultMultiAI(`CV : ${selectedResume.title}\n\nRésumé : ${selectedResume.profileSummary}`)}
+                    disabled={isConsultingMultiAI}
+                    className="bg-slate-900 text-amber-400 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                  >
+                    <Cpu className="w-3.5 h-3.5" />
+                    <span>Soumettre au Consensus Multi-IA</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
+                Sélectionnez un CV pour l'afficher.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: CONSENSUS MULTI-IA GRATUITES */}
+      {activeTab === "multi_ai" && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 shadow-xs">
+          <div className="border-b pb-4">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Cpu className="w-5 h-5 text-indigo-600" />
+              Consensus & Évaluation des IA Gratuites du Marché
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Validation simultanée de votre candidature par Gemini, Mistral, Llama, DeepSeek, Qwen et DuckDuckGo AI.
+            </p>
+          </div>
+
+          {multiAIConsensus ? (
+            <div className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-slate-800 leading-relaxed font-medium">
+                <div className="font-bold text-amber-950 mb-1 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  Synthèse Décisionnelle de Georges
+                </div>
+                <div className="whitespace-pre-line">{multiAIConsensus.synthesis}</div>
               </div>
 
-              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                {history.map((h) => (
-                  <div
-                    key={h.id}
-                    onClick={() => setCurrentLetter(h)}
-                    className={`p-2 rounded-xl text-xs border transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                      currentLetter?.id === h.id
-                        ? "bg-amber-50/70 border-amber-300 font-semibold text-slate-900"
-                        : "bg-slate-50/50 border-slate-200 hover:bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      {h.documentType === "courrier" ? (
-                        <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      ) : (
-                        <Mail className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                      )}
-                      <span className="truncate">{h.title}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {multiAIConsensus.consultedAIs.map((ai) => (
+                  <div key={ai.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 text-xs">{ai.name}</span>
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">
+                        Score {ai.score}%
+                      </span>
                     </div>
-                    <span className="text-[10px] text-slate-400 shrink-0">{h.createdAt}</span>
+                    <p className="text-xs text-slate-600 line-clamp-3">{ai.responseReceived}</p>
+                    <div className="text-[10px] text-indigo-900 font-semibold bg-indigo-50 p-1.5 rounded">
+                      Point fort : {ai.keyTakeaway}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Right Column: High-Craft Document Preview & Actions */}
-        <div className="lg:col-span-7">
-          {currentLetter ? (
-            <div className="space-y-4">
-              {/* Action Toolbar */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-xs flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900">
-                    {currentLetter.documentType === "courrier" ? "Courrier officiel" : "Email rédigé"}
-                  </span>
-                  <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
-                    Prêt à l'emploi
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={handleCopyText}
-                    className="text-xs font-medium bg-slate-50 hover:bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? "Copié !" : "Copier"}</span>
-                  </button>
-
-                  <button
-                    onClick={handlePrint}
-                    className="text-xs font-medium bg-slate-50 hover:bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-                    title="Imprimer ou enregistrer en PDF"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Imprimer / PDF</span>
-                  </button>
-
-                  <button
-                    onClick={handleSaveNote}
-                    className="text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <StickyNote className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Sauvegarder en Note</span>
-                  </button>
-                </div>
-              </div>
-
-              {savedSuccess && (
-                <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-medium flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>{savedSuccess}</span>
-                </div>
-              )}
-
-              {/* Classical Paper Letterhead Layout (Printable) */}
-              <div 
-                id="printable-letter"
-                className="bg-white rounded-2xl border border-slate-200/90 p-8 sm:p-12 shadow-sm font-serif text-slate-900 min-h-[500px]"
-              >
-                {/* 1. Header: Sender (Left) & Recipient (Right) */}
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8 text-sm font-sans">
-                  {/* Sender Block */}
-                  <div className="text-slate-800 leading-relaxed">
-                    <p className="font-bold text-base text-slate-900">{currentLetter.senderBlock.split("\n")[0]}</p>
-                    {currentLetter.senderBlock.split("\n").slice(1).map((line, i) => (
-                      <p key={i} className="text-xs text-slate-600">{line}</p>
-                    ))}
-                  </div>
-
-                  {/* Recipient Block */}
-                  <div className="sm:text-right bg-slate-50/70 p-3.5 rounded-xl border border-slate-100 text-slate-800 leading-relaxed max-w-xs">
-                    <p className="font-bold text-xs uppercase tracking-wider text-slate-500 mb-1">Destinataire</p>
-                    <p className="font-bold text-slate-900">{currentLetter.recipientBlock.split("\n")[0]}</p>
-                    {currentLetter.recipientBlock.split("\n").slice(1).map((line, i) => (
-                      <p key={i} className="text-xs text-slate-600">{line}</p>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 2. Date and Location */}
-                <div className="text-right text-xs font-sans text-slate-500 mb-6 italic">
-                  {currentLetter.dateLocation}
-                </div>
-
-                {/* 3. Subject (Objet) */}
-                <div className="font-sans font-bold text-sm sm:text-base text-slate-900 mb-6 pb-2 border-b border-slate-200">
-                  {currentLetter.subject}
-                </div>
-
-                {/* 4. Salutation */}
-                <div className="font-sans text-sm font-semibold text-slate-800 mb-5">
-                  {currentLetter.salutation}
-                </div>
-
-                {/* 5. Body Paragraphs */}
-                <div className="space-y-4 text-sm sm:text-[15px] leading-relaxed text-slate-800 text-justify">
-                  {currentLetter.bodyParagraphs.map((paragraph, idx) => (
-                    <p key={idx}>{paragraph}</p>
-                  ))}
-                </div>
-
-                {/* 6. Valediction */}
-                <div className="mt-6 font-sans text-sm text-slate-800 leading-relaxed">
-                  {currentLetter.valediction}
-                </div>
-
-                {/* 7. Signature */}
-                <div className="mt-10 sm:mt-12 text-right font-sans">
-                  <p className="text-xs text-slate-400 mb-1">Pour faire valoir ce que de droit,</p>
-                  <p className="text-base font-bold text-slate-900">{currentLetter.signature}</p>
-                  <div className="inline-block mt-2 px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] text-slate-400 font-mono">
-                    Signé numériquement par Fabrice
-                  </div>
-                </div>
-              </div>
-
-              {/* Georges' Butler Advice Callout */}
-              {currentLetter.georgesAdvice && (
-                <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-3.5 flex items-start gap-3 text-xs text-amber-950">
-                  <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold block mb-0.5">La recommandation de Georges :</span>
-                    <p className="leading-relaxed">{currentLetter.georgesAdvice}</p>
-                  </div>
-                </div>
-              )}
-            </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400 shadow-xs">
-              <FileText className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-              <p className="text-sm font-semibold text-slate-600">Aucun document en cours</p>
-              <p className="text-xs mt-1">Renseignez vos souhaits à gauche pour que Georges compose votre courrier.</p>
+            <div className="text-center py-12 text-slate-400 text-xs space-y-3">
+              <p>Aucune consultation multi-IA en cours.</p>
+              <button
+                onClick={() => handleConsultMultiAI("Évalue ma candidature de Responsable Sécurité chez France Maison Sécurité.")}
+                className="bg-slate-900 text-amber-400 px-4 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Lancer le Consensus Multi-IA de Démo</span>
+              </button>
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 };

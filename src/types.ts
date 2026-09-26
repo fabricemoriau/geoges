@@ -75,11 +75,14 @@ export interface EmailCampaign {
   createdAt: string;
 }
 
-export type EmailCategory = "important" | "newsletter" | "facture" | "promo";
+export type EmailAccount = "fabrice.moriau@gmail.com" | "francemaisonsecurite@gmail.com";
+export type EmailCategory = "important" | "newsletter" | "facture" | "promo" | "fms_client" | "dossier";
 export type EmailUrgency = "haute" | "moyenne" | "basse";
+export type SenderTriagingDecision = "garder" | "supprimer_bloquer" | "bloque" | "en_attente";
 
 export interface EmailItem {
   id: string;
+  account: EmailAccount;
   from: string;
   fromName: string;
   subject: string;
@@ -92,7 +95,117 @@ export interface EmailItem {
   isStarred: boolean;
   summary?: string;
   suggestedAction?: string;
+  triagingRecommendation?: "garder" | "supprimer_bloquer";
+  senderDecision?: SenderTriagingDecision;
   tags?: string[];
+}
+
+export interface CaseDocument {
+  id: string;
+  fileName: string;
+  fileType: "pdf" | "docx" | "txt" | "png";
+  sizeKb: number;
+  content: string;
+  createdAt: string;
+}
+
+export interface CaseDossierItem {
+  id: string;
+  dossierNumber: string;
+  title: string;
+  account: EmailAccount | "perso";
+  clientOrSubject: string;
+  category: "Administratif" | "France Maison Sécurité" | "Juridique" | "Emploi" | "Autre";
+  status: "en_cours" | "en_attente" | "clôturé";
+  summary: string;
+  documents: CaseDocument[];
+  updatedAt: string;
+}
+
+export interface ContactConversation {
+  id: string;
+  contactName: string;
+  contactEmail: string;
+  account: EmailAccount;
+  company?: string;
+  lastMessage: string;
+  updatedAt: string;
+  messages: {
+    id: string;
+    sender: "user" | "contact" | "georges";
+    text: string;
+    timestamp: string;
+  }[];
+}
+
+export interface WebSearchResult {
+  id: string;
+  query: string;
+  title: string;
+  snippet: string;
+  url: string;
+  source: string;
+  publishedDate?: string;
+}
+
+export interface SocialMediaPost {
+  id: string;
+  platform: "linkedin" | "facebook";
+  accountName: string;
+  title: string;
+  content: string;
+  hashtags: string[];
+  status: "brouillon" | "planifié" | "publié";
+  suggestedVisualPrompt?: string;
+  createdAt: string;
+}
+
+export interface JobOfferItem {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  contractType: string; // CDI, CDD, Mission, etc.
+  description: string;
+  salary?: string;
+  sourceUrl?: string;
+  postedDate: string;
+  matchScore: number;
+  keyRequirements: string[];
+}
+
+export interface TailoredResume {
+  id: string;
+  title: string;
+  targetJobTitle: string;
+  profileSummary: string;
+  keySkills: string[];
+  experiences: {
+    role: string;
+    company: string;
+    duration: string;
+    description: string;
+    bulletPoints: string[];
+  }[];
+  education: {
+    degree: string;
+    school: string;
+    year: string;
+  }[];
+  certifications?: string[];
+  tailoredForJobId?: string;
+  createdAt: string;
+}
+
+export interface UserRequestItem {
+  id: string;
+  requestText: string;
+  source: "vocal" | "texte" | "automatique";
+  category: "Email" | "Dossier" | "Recherche Web" | "Réseaux Sociaux" | "Emploi" | "Agenda" | "Autre";
+  status: "reçue" | "en_cours" | "traitée" | "en_attente_validation";
+  georgesNotes?: string;
+  recordedAt: string;
+  completedAt?: string;
 }
 
 export interface NoteItem {

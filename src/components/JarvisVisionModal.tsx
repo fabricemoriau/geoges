@@ -28,6 +28,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { CapturedMedia } from "../types";
+import { getApiUrl } from "../utils/api";
 
 interface JarvisVisionModalProps {
   isOpen: boolean;
@@ -315,7 +316,7 @@ export const JarvisVisionModal: React.FC<JarvisVisionModalProps> = ({
     setGallery((prev) => [newMedia, ...prev]);
 
     try {
-      const res = await fetch("/api/vision/analyze", {
+      const res = await fetch(getApiUrl("/api/vision/analyze"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

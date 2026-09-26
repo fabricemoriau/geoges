@@ -10,12 +10,19 @@ import {
   HealthLogEntry,
   AppProject,
   BetaTester,
-  CodeVaultItem
+  CodeVaultItem,
+  CaseDossierItem,
+  ContactConversation,
+  SocialMediaPost,
+  JobOfferItem,
+  TailoredResume,
+  UserRequestItem
 } from "../types";
 
 export const initialEmails: EmailItem[] = [
   {
     id: "mail-1",
+    account: "fabrice.moriau@gmail.com",
     from: "claire.duval@atelier-design.fr",
     fromName: "Claire Duval (Atelier Design)",
     subject: "Proposition de maquettes pour la refonte produit + validation devis",
@@ -39,10 +46,44 @@ Directrice Artistique`,
     isStarred: true,
     summary: "Validation requise des maquettes client et devis avant jeudi pour lancement de l'intégration.",
     suggestedAction: "Répondre immédiatement et planifier un point de 15 min",
+    triagingRecommendation: "garder",
+    senderDecision: "garder",
     tags: ["Client", "Devis", "Projet"],
   },
   {
+    id: "mail-fms-1",
+    account: "francemaisonsecurite@gmail.com",
+    from: "dossiers.clients@francemaisonsecurite.fr",
+    fromName: "Service Technique FMS",
+    subject: "Dossier #FMS-2026-88 : Installation Système de Sécurité Alarme & Vidéo",
+    date: "Aujourd'hui à 08:30",
+    snippet: "Bonjour M. Moriau, le dossier d'installation du client Résidence Les Pins a été complété et validé par l'expert.",
+    body: `Bonjour M. Fabrice Moriau,
+
+Le dossier technique #FMS-2026-88 concernant la fourniture et pose de la télésurveillance haute définition et contrôle d'accès pour la Résidence Les Pins est disponible.
+
+Résumé du dossier :
+- Équipements : 8 caméras IP 4K, centrale d'alarme anti-intrusion, détecteurs IR
+- Devis validé : 14 850,00 € HT
+- Date de pose prévue : 28 Septembre 2026
+
+Veuillez vérifier et télécharger le dossier complet en pièce jointe pour validation finale.
+
+Cordialement,
+L'Équipe Technique France Maison Sécurité`,
+    category: "fms_client",
+    urgency: "haute",
+    isRead: false,
+    isStarred: true,
+    summary: "Dossier d'installation sécurité FMS de 14 850 € HT prêt pour téléchargement et validation.",
+    suggestedAction: "Ouvrir dans le suivi de dossier et télécharger sur smartphone",
+    triagingRecommendation: "garder",
+    senderDecision: "garder",
+    tags: ["FMS", "Télésurveillance", "Dossier Client"],
+  },
+  {
     id: "mail-2",
+    account: "fabrice.moriau@gmail.com",
     from: "facturation@ovhcloud.com",
     fromName: "OVHcloud Facturation",
     subject: "Facture n° FR-2026-98124 - Renouvellement domaine et serveur",
@@ -66,10 +107,33 @@ Vous pouvez télécharger le PDF depuis votre console de gestion.`,
     isStarred: false,
     summary: "Facture OVHcloud de 42,90 € prélevée sous 48h pour hébergement et domaines.",
     suggestedAction: "Classer dans la comptabilité",
+    triagingRecommendation: "garder",
+    senderDecision: "garder",
     tags: ["Compta", "Serveur"],
   },
   {
+    id: "mail-fms-2",
+    account: "francemaisonsecurite@gmail.com",
+    from: "spambot-promo@offre-securite-discount.com",
+    fromName: "Offres Flash Sécurité Pub",
+    subject: " [SPAM] Vente flash caméras chinoises discount -80%",
+    date: "Aujourd'hui à 05:12",
+    snippet: "Achetez en gros des caméras pas chères sans garantie ni support technique...",
+    body: `Profitez d'une remise exceptionnelle sur du matériel de faible qualité sans certification CE.
+Cliquez ici pour commander.`,
+    category: "promo",
+    urgency: "basse",
+    isRead: false,
+    isStarred: false,
+    summary: "Email publicitaire non sollicité émis par un expéditeur suspect.",
+    suggestedAction: "Bloquer l'expéditeur et supprimer définitivement",
+    triagingRecommendation: "supprimer_bloquer",
+    senderDecision: "en_attente",
+    tags: ["Spam", "A Purger"],
+  },
+  {
     id: "mail-3",
+    account: "fabrice.moriau@gmail.com",
     from: "news@tech-trends-weekly.io",
     fromName: "Tech Trends Weekly",
     subject: "L'essor de l'IA locale et les serveurs domestiques autonomes",
@@ -91,10 +155,13 @@ Bonne lecture !`,
     isStarred: false,
     summary: "Newsletter sur le recyclage de vieux PC en serveurs d'IA et stockage local autonome.",
     suggestedAction: "Archiver après lecture",
+    triagingRecommendation: "garder",
+    senderDecision: "garder",
     tags: ["Veille", "Serveur"],
   },
   {
     id: "mail-4",
+    account: "fabrice.moriau@gmail.com",
     from: "promo@fnac-pro.com",
     fromName: "Fnac Électronique",
     subject: "⚡ Ventes Flash : Disques durs NAS 4To et adaptateurs réseau à -40%",
@@ -109,10 +176,13 @@ Cliquez ici pour découvrir les offres limitées.`,
     isStarred: false,
     summary: "Promotion Fnac sur les disques durs pour serveurs domestiques.",
     suggestedAction: "Archiver ou se désabonner",
+    triagingRecommendation: "supprimer_bloquer",
+    senderDecision: "en_attente",
     tags: ["Promo"],
   },
   {
     id: "mail-5",
+    account: "fabrice.moriau@gmail.com",
     from: "alexandre.leroy@partenaires-immo.be",
     fromName: "Alexandre Leroy",
     subject: "Revue du contrat de partenariat & date de signature",
@@ -131,6 +201,8 @@ Alexandre Leroy`,
     isStarred: true,
     summary: "Validation finale du contrat de partenariat, demande de signature vendredi à 10h30.",
     suggestedAction: "Ajouter à l'agenda vendredi 10h30 et confirmer par mail",
+    triagingRecommendation: "garder",
+    senderDecision: "garder",
     tags: ["Contrat", "Juridique"],
   },
 ];
@@ -665,4 +737,263 @@ export const initialCodeVaultItems: CodeVaultItem[] = [
     notes: "Clé de signature de build"
   }
 ];
+
+// Initialisation Suivi de Dossiers pour M. Fabrice Moriau & France Maison Sécurité
+export const initialCaseDossiers: CaseDossierItem[] = [
+  {
+    id: "dos-1",
+    dossierNumber: "FMS-2026-88",
+    title: "Installation Télésurveillance HD & Contrôle d'Accès",
+    account: "francemaisonsecurite@gmail.com",
+    clientOrSubject: "Copropriété Résidence Les Pins",
+    category: "France Maison Sécurité",
+    status: "en_cours",
+    summary: "Installation de 8 caméras IP 4K avec centrale d'alarme et transmission GSM.",
+    documents: [
+      {
+        id: "doc-1",
+        fileName: "Devis_Valide_FMS_2026_88.pdf",
+        fileType: "pdf",
+        sizeKb: 420,
+        content: "Devis d'installation validé pour un montant de 14 850,00 € HT. Matériel certifié NFA2P.",
+        createdAt: "2026-09-20",
+      },
+      {
+        id: "doc-2",
+        fileName: "Plan_Implantation_Caméras.pdf",
+        fileType: "pdf",
+        sizeKb: 1250,
+        content: "Schéma d'implantation des caméras extérieures et détecteurs infrarouges.",
+        createdAt: "2026-09-21",
+      }
+    ],
+    updatedAt: "Aujourd'hui à 08:30"
+  },
+  {
+    id: "dos-2",
+    dossierNumber: "ADM-2026-04",
+    title: "Renouvellement Agrément Transport Sanitaire & Ambulance",
+    account: "fabrice.moriau@gmail.com",
+    clientOrSubject: "Agence Régionale de Santé (ARS)",
+    category: "Administratif",
+    status: "en_attente",
+    summary: "Dossier de renouvellement d'autorisation d'immatriculation des véhicules sanitaires.",
+    documents: [
+      {
+        id: "doc-3",
+        fileName: "Formulaire_ARS_Agrément_2026.pdf",
+        fileType: "pdf",
+        sizeKb: 310,
+        content: "Formulaire CERFA complété avec pièces justificatives de contrôle technique et diplôme DEA.",
+        createdAt: "2026-09-18",
+      }
+    ],
+    updatedAt: "19 Septembre 2026"
+  }
+];
+
+// Conversations & Contacts
+export const initialContacts: ContactConversation[] = [
+  {
+    id: "cont-1",
+    contactName: "Claire Duval",
+    contactEmail: "claire.duval@atelier-design.fr",
+    account: "fabrice.moriau@gmail.com",
+    company: "Atelier Design",
+    lastMessage: "Les maquettes sont validées. On cale un rapide point de confirmation ?",
+    updatedAt: "Aujourd'hui à 09:25",
+    messages: [
+      {
+        id: "m-1",
+        sender: "contact",
+        text: "Bonjour Fabrice, je te transmets les maquettes finalisées ainsi que le devis ajusté.",
+        timestamp: "09:20"
+      },
+      {
+        id: "m-2",
+        sender: "georges",
+        text: "Bonjour Claire. Monsieur Moriau a bien reçu vos éléments. Georges prépare un créneau dans son agenda.",
+        timestamp: "09:22"
+      }
+    ]
+  },
+  {
+    id: "cont-2",
+    contactName: "Responsable Technique FMS",
+    contactEmail: "technique@francemaisonsecurite.fr",
+    account: "francemaisonsecurite@gmail.com",
+    company: "France Maison Sécurité",
+    lastMessage: "Le matériel est livré à l'entrepôt pour le chantier Résidence Les Pins.",
+    updatedAt: "Hier à 16:40",
+    messages: [
+      {
+        id: "m-3",
+        sender: "contact",
+        text: "Bonjour M. Moriau, réception de la commande de caméras 4K confirmée.",
+        timestamp: "Hier à 16:40"
+      }
+    ]
+  }
+];
+
+// Posts Réseaux Sociaux (LinkedIn / Facebook)
+export const initialSocialPosts: SocialMediaPost[] = [
+  {
+    id: "post-1",
+    platform: "linkedin",
+    accountName: "Fabrice Moriau",
+    title: "L'IA au service de la sécurité privée et de la protection des biens",
+    content: `🔐 Comment l'IA redéfinit la sécurité résidentielle et la protection des entreprises en 2026.
+
+Dans un monde où la réactivité est cruciale, la convergence entre vidéosurveillance intelligente et agents d'intervention autonomes permet d'éliminer 95% des fausses alertes.
+
+Chez France Maison Sécurité, nous déployons des architectures sur-mesure pour garantir une sérénité totale.
+
+Quelles sont vos priorités pour la sécurité de vos locaux cette année ?
+
+#SécuritéPrivée #IA #Télésurveillance #FranceMaisonSécurité #Innovation`,
+    hashtags: ["#SécuritéPrivée", "#IA", "#Télésurveillance", "#FranceMaisonSécurité"],
+    status: "brouillon",
+    suggestedVisualPrompt: "A sleek modern smart home dashboard showing 4K security feeds with futuristic AI overlay HUD",
+    createdAt: "Aujourd'hui"
+  },
+  {
+    id: "post-2",
+    platform: "facebook",
+    accountName: "France Maison Sécurité - Page Officielle",
+    title: "Offre Spéciale Automne : Protégez votre maison avant les vacances !",
+    content: `🏠 Protégez votre foyer en toute simplicité avec France Maison Sécurité !
+
+Avez-vous pensé à sécuriser votre domicile avant vos prochains déplacements ?
+Nos kits d'alarme connectée installés par nos experts vous permettent de garder un œil sur votre maison 24/7 directement depuis votre smartphone.
+
+💡 Bénéficiez d'un diagnostic sécurité gratuit et sans engagement de votre domicile !
+
+👉 Contactez-nous sur francemaisonsecurite@gmail.com ou laissez-nous un message en MP.`,
+    hashtags: ["#Sérénité", "#MaisonConnectée", "#Alarme"],
+    status: "brouillon",
+    suggestedVisualPrompt: "A warm family home lit up at twilight with subtle glowing security indicator shield",
+    createdAt: "Hier"
+  }
+];
+
+// Offres d'Emploi & CV Sur-Mesure
+export const initialJobOffers: JobOfferItem[] = [
+  {
+    id: "job-1",
+    title: "Responsable Sécurité & Systèmes de Surveillance",
+    company: "Securitas & Protection Pro",
+    location: "Paris / Île-de-France (Hybride)",
+    contractType: "CDI",
+    description: "Pilotage des projets d'installation d'alarme, contrôle d'accès et vidéosurveillance IP. Encadrement des équipes techniques.",
+    salary: "45 000 € - 52 000 € / an",
+    postedDate: "Hier",
+    matchScore: 96,
+    keyRequirements: ["Expertise Alarme & Vidéo IP", "Gestion de projets sécurité", "Permis B", "Aisance relationnelle client"]
+  },
+  {
+    id: "job-2",
+    title: "Coordinateur des Operations de Transport Sanitaire / Ambulances",
+    company: "Groupe Santé Secours Express",
+    location: "Région Parisienne",
+    contractType: "CDI",
+    description: "Gestion des plannings de garde, régulation SAMU/15, supervision des diplômes DEA et entretien de la flotte.",
+    salary: "40 000 € - 46 000 € / an",
+    postedDate: "Il y a 2 jours",
+    matchScore: 92,
+    keyRequirements: ["Expérience terrain Ambulance / SAMU", "Maîtrise des plannings et règles sanitaires", "Leadership"]
+  }
+];
+
+export const initialTailoredResumes: TailoredResume[] = [
+  {
+    id: "cv-1",
+    title: "CV Expert Sécurité & Gestionnaire Technique - Fabrice Moriau",
+    targetJobTitle: "Responsable Sécurité & Systèmes de Surveillance",
+    profileSummary: "Professionnel expérimenté et rigoureux combinant une solide expertise technique en alarme, télésurveillance et contrôle d'accès (France Maison Sécurité) avec une maîtrise des outils d'IA pour optimiser les processus opérationnels.",
+    keySkills: ["Télésurveillance IP 4K", "Centrales Alarme NFA2P", "Gestion de Dossiers Clients", "Automatisation & IA", "Réglementation Sécurité"],
+    experiences: [
+      {
+        role: "Fondateur & Responsable Technique",
+        company: "France Maison Sécurité",
+        duration: "2021 - Présent",
+        description: "Direction opérationnelle des installations d'alarmes, vidéo-protection et contrôle d'accès pour professionnels et particuliers.",
+        bulletPoints: [
+          "Supervision de plus de 150 chantiers d'installation de télésurveillance",
+          "Gestion des relations clients, élaboration des devis et suivi des dossiers",
+          "Mise en place du pilotage automatisé des dossiers avec l'agent IA Georges"
+        ]
+      },
+      {
+        role: "Ambulancier & Professionnel de Santé Sanitaire",
+        company: "Transport Sanitaire ASSU / SAMU",
+        duration: "2018 - Présent",
+        description: "Prise en charge d'urgence, régulation et interventions de garde.",
+        bulletPoints: [
+          "Gestion des vacations d'urgence ASSU/VSL en coordination avec le SAMU 15",
+          "Conception de l'application AmbuGuard Pro pour la gestion des tournées"
+        ]
+      }
+    ],
+    education: [
+      {
+        degree: "Diplôme d'État d'Ambulancier (DEA)",
+        school: "IFA Santé",
+        year: "2018"
+      },
+      {
+        degree: "Formation Technique Systèmes Sécurité & Électronique",
+        school: "Institut Supérieur de Sécurité",
+        year: "2015"
+      }
+    ],
+    tailoredForJobId: "job-1",
+    createdAt: "2026-09-21"
+  }
+];
+
+// Registre des Demandes de Monsieur Fabrice Moriau
+export const initialUserRequests: UserRequestItem[] = [
+  {
+    id: "req-1",
+    requestText: "Trier les emails récents et isoler les spams du compte francemaisonsecurite@gmail.com",
+    source: "vocal",
+    category: "Email",
+    status: "traitée",
+    georgesNotes: "Analyse effectuée. 1 spam identifié et proposé pour blocage.",
+    recordedAt: "Aujourd'hui à 08:35",
+    completedAt: "Aujourd'hui à 08:36"
+  },
+  {
+    id: "req-2",
+    requestText: "Créer un dossier de suivi pour le chantier Résidence Les Pins et le préparer pour téléchargement téléphone",
+    source: "texte",
+    category: "Dossier",
+    status: "traitée",
+    georgesNotes: "Dossier #FMS-2026-88 créé avec devis et plans PDF téléchargeables.",
+    recordedAt: "Aujourd'hui à 08:40",
+    completedAt: "Aujourd'hui à 08:42"
+  },
+  {
+    id: "req-3",
+    requestText: "Générer un post LinkedIn pour valoriser notre expertise chez France Maison Sécurité",
+    source: "vocal",
+    category: "Réseaux Sociaux",
+    status: "traitée",
+    georgesNotes: "Post LinkedIn rédigé et disponible dans l'onglet Marketing & Réseaux.",
+    recordedAt: "Aujourd'hui à 09:10",
+    completedAt: "Aujourd'hui à 09:12"
+  },
+  {
+    id: "req-4",
+    requestText: "Rechercher des offres d'emploi dans la sécurité privée et générer un CV adapté sur-mesure",
+    source: "vocal",
+    category: "Emploi",
+    status: "traitée",
+    georgesNotes: "Offre Securitas identifiée (score 96%), CV sur-mesure généré.",
+    recordedAt: "Aujourd'hui à 09:30",
+    completedAt: "Aujourd'hui à 09:35"
+  }
+];
+
 
