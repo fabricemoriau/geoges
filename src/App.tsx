@@ -21,6 +21,11 @@ import { PhoneAppsTab } from "./components/PhoneAppsTab";
 import { AppPublisherTab } from "./components/AppPublisherTab";
 import { CodeVaultTab } from "./components/CodeVaultTab";
 import { OnboardingScreen } from "./components/OnboardingScreen";
+import { MarriageTab } from "./components/MarriageTab";
+import { VisaTab } from "./components/VisaTab";
+import { SocialSecurityTab } from "./components/SocialSecurityTab";
+import { ExpatDocVaultTab } from "./components/ExpatDocVaultTab";
+import { OfficialLinksTab } from "./components/OfficialLinksTab";
 import {
   initialEmails, 
   initialNotes, 
@@ -477,6 +482,26 @@ export default function App() {
             onOpenVisionModal={handleOpenVisionModal}
             onAddCode={handleAddCode}
           />
+        )}
+
+        {currentTab === "marriage" && (
+          <MarriageTab onAddNote={handleAddNote} />
+        )}
+
+        {currentTab === "visas" && (
+          <VisaTab onAddNote={handleAddNote} />
+        )}
+
+        {currentTab === "social" && (
+          <SocialSecurityTab onAddNote={handleAddNote} />
+        )}
+
+        {currentTab === "vault" && (
+          <ExpatDocVaultTab onAddNote={handleAddNote} />
+        )}
+
+        {currentTab === "links" && (
+          <OfficialLinksTab onAddNote={handleAddNote} />
         )}
 
         {currentTab === "alarm" && (

@@ -16,7 +16,13 @@ import {
   SocialMediaPost,
   JobOfferItem,
   TailoredResume,
-  UserRequestItem
+  UserRequestItem,
+  MarriageGuideItem,
+  VisaItem,
+  SocialSecurityItem,
+  ExpatScanDocument,
+  OfficialSiteItem,
+  EmbassyItem
 } from "../types";
 
 export const initialEmails: EmailItem[] = [
@@ -956,7 +962,7 @@ export const initialTailoredResumes: TailoredResume[] = [
 export const initialUserRequests: UserRequestItem[] = [
   {
     id: "req-1",
-    requestText: "Trier les emails récents et isoler les spams du compte francemaisonsecurite@gmail.com",
+    requestText: "Trier les e-mails récents et isoler les spams du compte francemaisonsecurite@gmail.com",
     source: "vocal",
     category: "Email",
     status: "traitée",
@@ -995,5 +1001,189 @@ export const initialUserRequests: UserRequestItem[] = [
     completedAt: "Aujourd'hui à 09:35"
   }
 ];
+
+// L'APPLICATION DES EXPATRIÉS : DONNÉES INITIALES
+
+export const initialMarriageGuides: MarriageGuideItem[] = [
+  {
+    id: "mar-1",
+    title: "Obtenir le Certificat de Capacité à Mariage (CCAM)",
+    category: "ccam",
+    steps: [
+      "Constituer le dossier de demande de CCAM auprès de l'ambassade ou du consulat de France du pays du mariage.",
+      "Fournir les actes de naissance de moins de 3 mois pour le conjoint français et de moins de 6 mois pour le conjoint étranger.",
+      "Justificatif de domicile récent et pièces d'identité en cours de validité.",
+      "Publication des bans obligatoire pendant 10 jours à l'ambassade et dans la mairie du dernier domicile en France."
+    ],
+    requiredDocuments: [
+      "Copie intégrale d'acte de naissance de moins de 3 mois",
+      "Justificatif de nationalité française (copie de la carte nationale d'identité ou certificat de nationalité)",
+      "Justificatif de domicile",
+      "Formulaires consulaires de demande de CCAM remplis et signés"
+    ],
+    tips: "Le CCAM est obligatoire pour tout mariage d'un ressortissant français à l'étranger afin de garantir la transcription ultérieure sans encombre dans les registres français."
+  },
+  {
+    id: "mar-2",
+    title: "Transcription de l'Acte de Mariage Étranger",
+    category: "transcription",
+    steps: [
+      "Une fois le mariage célébré à l'étranger, retirer l'acte de mariage local (légalisé ou apostillé selon les conventions internationales).",
+      "Traduire l'acte de mariage par un traducteur assermenté si rédigé en langue étrangère.",
+      "Transmettre le dossier complet de demande de transcription au consulat de France compétent.",
+      "Délivrance du livret de famille français et des copies d'actes de mariage français."
+    ],
+    requiredDocuments: [
+      "Copie intégrale de l'acte de mariage étranger original",
+      "Traduction assermentée de l'acte",
+      "Copie des actes de naissance des époux",
+      "Livret de famille (si déjà détenteur ou à créer)"
+    ],
+    tips: "La transcription est l'étape finale indispensable pour faire reconnaître officiellement votre mariage en France auprès de toutes les administrations."
+  }
+];
+
+export const initialVisas: VisaItem[] = [
+  {
+    id: "visa-1",
+    title: "Visa de Long Séjour valant Titre de Séjour (VLS-TS Salarié)",
+    type: "salarie",
+    description: "Pour les ressortissants étrangers recrutés en France avec un contrat de travail validé par la DDETSPP.",
+    requiredDocuments: [
+      "Formulaire de demande de visa long séjour complété",
+      "Passeport en cours de validité",
+      "Contrat de travail visé par l'administration française",
+      "Justificatif de domicile en France"
+    ],
+    officialLink: "https://france-visas.gouv.fr"
+  },
+  {
+    id: "visa-2",
+    title: "Renouvellement de Titre de Séjour en Préfecture",
+    type: "renouvellement",
+    description: "Démarche à effectuer sur le portail ANEF (Administration Numérique des Étrangers en France) 2 mois avant l'expiration du titre actuel.",
+    requiredDocuments: [
+      "Passeport et ancien titre de séjour",
+      "Justificatif de domicile de moins de 3 mois",
+      "Justificatifs de ressources (bulletins de paie, avis d'imposition)",
+      "Timbres fiscaux requis selon le motif"
+    ],
+    officialLink: "https://administration-etrangers-en-france.interieur.gouv.fr"
+  }
+];
+
+export const initialSocialSecurity: SocialSecurityItem[] = [
+  {
+    id: "sec-1",
+    title: "Affiliation à la Sécurité Sociale (CPAM) & Carte Vitale",
+    topic: "affiliation",
+    steps: [
+      "Créer son espace sur ameli.fr dès l'obtention du numéro de Sécurité sociale provisoire ou définitif.",
+      "Transmettre les justificatifs d'identité, de domicile, le contrat de travail ou attestation de résidence.",
+      "Télécharger sa photo d'identité et remplir le formulaire de demande de Carte Vitale.",
+      "Réception de la carte Vitale sous 2 à 3 semaines."
+    ],
+    requiredDocuments: [
+      "Pièce d'identité en cours de validité",
+      "Titre de séjour ou visa valide",
+      "Relevé d'identité bancaire (RIB français)",
+      "Justificatif de domicile"
+    ]
+  },
+  {
+    id: "sec-2",
+    title: "Caisse des Français de l'Étranger (CFE)",
+    topic: "cfe",
+    steps: [
+      "Pour les expatriés souhaitant conserver la protection sociale française hors de France.",
+      "Adhésion en ligne sur cfe.fr pour la couverture Maladie, Maternité, Accidents du travail ou Retraite.",
+      "Paiement des cotisations trimestrielles."
+    ],
+    requiredDocuments: [
+      "Formulaire d'adhésion CFE complété",
+      "Justificatif de résidence à l'étranger",
+      "RIB"
+    ]
+  }
+];
+
+export const initialExpatScans: ExpatScanDocument[] = [
+  {
+    id: "scan-1",
+    title: "Passeport Biométrique - Fabrice Moriau",
+    documentType: "passeport",
+    uploadDate: "2026-09-20",
+    notes: "Validité jusqu'en 2032. Scanné pour démarches consulaires."
+  },
+  {
+    id: "scan-2",
+    title: "Acte de Naissance (Copie Intégrale)",
+    documentType: "acte_naissance",
+    uploadDate: "2026-09-15",
+    notes: "Demandé pour dossier de mariage et formalités administratives."
+  }
+];
+
+export const initialOfficialSites: OfficialSiteItem[] = [
+  {
+    id: "site-1",
+    name: "Service-Public.fr",
+    description: "Le site officiel de l'administration française pour toutes vos démarches et modèles de courriers.",
+    url: "https://www.service-public.fr",
+    category: "administration"
+  },
+  {
+    id: "site-2",
+    name: "France-Visas",
+    description: "Portail officiel des visas pour la France (demandes, justificatifs et suivi).",
+    url: "https://france-visas.gouv.fr",
+    category: "administration"
+  },
+  {
+    id: "site-3",
+    name: "Ameli.fr",
+    description: "Le site officiel de l'Assurance Maladie pour la Sécurité Sociale et la carte Vitale.",
+    url: "https://www.ameli.fr",
+    category: "sante"
+  },
+  {
+    id: "site-4",
+    name: "Diplomatie.gouv.fr (France Diplomatie)",
+    description: "Conseils aux voyageurs, inscription au registre des Français établis hors de France et annuaire des ambassades.",
+    url: "https://www.diplomatie.gouv.fr",
+    category: "diplomatie"
+  }
+];
+
+export const initialEmbassies: EmbassyItem[] = [
+  {
+    id: "emb-1",
+    country: "Belgique",
+    city: "Bruxelles",
+    address: "1 Boulevard du Régent, 1000 Bruxelles",
+    phone: "+32 2 548 88 11",
+    email: "cad.bruxelles-amba@diplomatie.gouv.fr",
+    website: "https://be.ambafrance.org"
+  },
+  {
+    id: "emb-2",
+    country: "Espagne",
+    city: "Madrid",
+    address: "Calle Salustiano Olózaga 9, 28001 Madrid",
+    phone: "+34 91 423 89 00",
+    email: "contact@ambafrance-es.org",
+    website: "https://es.ambafrance.org"
+  },
+  {
+    id: "emb-3",
+    country: "Maroc",
+    city: "Rabat",
+    address: "1 rue Sésostris, Quartier Hassan, Rabat",
+    phone: "+212 5 37 68 97 00",
+    email: "cad.rabat-amba@diplomatie.gouv.fr",
+    website: "https://ma.ambafrance.org"
+  }
+];
+
 
 

@@ -50,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 hidden sm:block">
-                Assistant personnel de Fabrice &middot; Gestionnaire Mails, Agenda, Alarme & Applications
+                Assistant de Fabrice &middot; Mariage, Visas, Sécurité Sociale, Papiers & Droits des Expatriés
               </p>
             </div>
           </div>

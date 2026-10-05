@@ -496,3 +496,58 @@ export interface CodeVaultItem {
   notes?: string;
 }
 
+// L'Application des Expatriés Types
+export interface MarriageGuideItem {
+  id: string;
+  title: string;
+  category: "ccam" | "bans" | "transcription" | "legalisation";
+  steps: string[];
+  requiredDocuments: string[];
+  tips: string;
+}
+
+export interface VisaItem {
+  id: string;
+  title: string;
+  type: "etudiant" | "salarie" | "visiteur" | "famille" | "renouvellement";
+  description: string;
+  requiredDocuments: string[];
+  officialLink: string;
+}
+
+export interface SocialSecurityItem {
+  id: string;
+  title: string;
+  topic: "affiliation" | "carte_vitale" | "cfe" | "remboursement";
+  steps: string[];
+  requiredDocuments: string[];
+}
+
+export interface ExpatScanDocument {
+  id: string;
+  title: string;
+  documentType: "passeport" | "titre_sejour" | "acte_naissance" | "justificatif_domicile" | "autre";
+  fileDataUrl?: string;
+  uploadDate: string;
+  notes?: string;
+}
+
+export interface OfficialSiteItem {
+  id: string;
+  name: string;
+  description: string;
+  url: string;
+  category: "administration" | "sante" | "diplomatie" | "justice";
+}
+
+export interface EmbassyItem {
+  id: string;
+  country: string;
+  city: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+}
+
+
